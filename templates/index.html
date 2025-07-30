@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Métricas - Soporte IT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo Empresa" class="header-logo">
+        <div class="header-text">
+            <h1>Dashboard de Métricas de Soporte</h1>
+            <p>Reportes generados para 'Issues' creados desde el {{ START_DATE }}</p>
+        </div>
+    </header>
+    <div class="container">
+        {% for report in reports %}
+        <div class="report-card">
+            <h2>{{ report.title }}</h2>
+
+            {% if not report.has_data %}
+                <p class="no-data">No se encontraron 'Issues' que cumplan los criterios.</p>
+            {% else %}
+                <div class="stats-section">
+                    <h3>Desglose Mensual</h3>
+                    <ul>
+                        {% for item in report.monthly_breakdown %}
+                            <li>
+                                <strong>🗓️ {{ item.month }}:</strong> {{ item.count }} Issues
+                                <span class="monthly-metrics">
+                                    (Promedio: {{ format_timedelta(item.avg_duration) }} | Mediana: {{ format_timedelta(item.median_duration) }})
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="stats-section">
+                    <h3>Métricas Generales</h3>
+                    <p><strong>⏱️ Promedio Total:</strong> {{ format_timedelta(report.avg_duration) }}</p>
+                    <p><strong>⚖️ Mediana Total:</strong> {{ format_timedelta(report.median_duration) }}</p>
+                </div>
+                
+                <div class="stats-section">
+                    <h3>📈 Top 5 Issues más Largos</h3>
+                    <ul>
+                        {% for item in report.top_issues %}
+                            <li><strong>Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
