@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, send_file
 import requests
 import base64
 from datetime import datetime, timedelta
@@ -7,6 +7,13 @@ import math
 import statistics
 from dotenv import load_dotenv
 import os
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+import io
 
 load_dotenv()
 PAT = os.getenv("PAT")
@@ -82,6 +89,448 @@ def format_timedelta(td):
     if not parts: return "< 1m"
     return " ".join(parts)
 
+def generate_pdf_report(reports_data):
+    """Genera un reporte PDF con los datos de métricas"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=50, bottomMargin=50)
+    
+    # Estilos mejorados
+    styles = getSampleStyleSheet()
+    
+    # Título principal más grande y elegante
+    title_style = ParagraphStyle(
+        'MainTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#012f60'),
+        fontName='Helvetica-Bold'
+    )
+    
+    # Subtítulo
+    subtitle_style = ParagraphStyle(
+        'Subtitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=10,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#012f60'),
+        fontName='Helvetica'
+    )
+    
+    # Títulos de sección
+    section_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=13,
+        spaceAfter=8,
+        spaceBefore=12,
+        textColor=colors.HexColor('#012f60'),
+        fontName='Helvetica-Bold',
+        borderWidth=0,
+        borderColor=colors.HexColor('#012f60'),
+        borderPadding=5
+    )
+    
+    # Estilo para texto normal
+    normal_style = ParagraphStyle(
+        'NormalText',
+        parent=styles['Normal'],
+        fontSize=9,
+        spaceAfter=6,
+        textColor=colors.HexColor('#012f60'),
+        fontName='Helvetica'
+    )
+    
+    # Contenido del PDF
+    story = []
+    
+    # PÁGINA 1: Título y primer reporte individual
+    # Agregar logo de la empresa arriba del título
+    try:
+        logo_path = os.path.join(os.path.dirname(__file__), 'static', 'Logo.png')
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, width=1*inch, height=0.5*inch)
+            logo.hAlign = 'CENTER'
+            story.append(logo)
+            story.append(Spacer(1, 15))
+    except Exception as e:
+        print(f"No se pudo cargar el logo: {e}")
+    
+    # Título principal más grande
+    story.append(Paragraph("DASHBOARD DE MÉTRICAS DE SOPORTE IT", title_style))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(f"Reportes generados para 'Issues' creados desde el {START_DATE}", subtitle_style))
+    story.append(Spacer(1, 10))
+    
+    # Procesar solo el primer reporte (Geleser Pimentel)
+    if len(reports_data) > 0:
+        report = reports_data[0]
+        # Formatear el título del reporte
+        title_parts = report["title"].split(": ")
+        if len(title_parts) > 1:
+            report_type = title_parts[0].lower()  # "reporte individual" o "reporte combinado"
+            user_name = title_parts[1].upper()    # Nombre en mayúsculas
+            # Capitalizar la primera letra del tipo de reporte
+            if report_type == "reporte individual":
+                report_type = "Reporte individual"
+            elif report_type == "reporte combinado":
+                report_type = "Reporte combinado"
+            formatted_title = f"{report_type}: {user_name}"
+        else:
+            formatted_title = report["title"]
+        
+        # Título del reporte con estilo mejorado
+        story.append(Paragraph(formatted_title, section_style))
+        
+        if report["has_data"]:
+            # Desglose mensual
+            story.append(Paragraph("DESGLOSE MENSUAL", section_style))
+            
+            # Tabla mejorada para el desglose mensual
+            monthly_data = [["MES", "CANTIDAD", "PROMEDIO", "MEDIANA"]]
+            for item in report["monthly_breakdown"]:
+                monthly_data.append([
+                    item["month"],
+                    str(item["count"]),
+                    format_timedelta(item["avg_duration"]),
+                    format_timedelta(item["median_duration"])
+                ])
+            
+            monthly_table = Table(monthly_data, colWidths=[2.2*inch, 1*inch, 1.4*inch, 1.4*inch])
+            monthly_table.setStyle(TableStyle([
+                # Encabezado
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+                ('TOPPADDING', (0, 0), (-1, 0), 10),
+                # Filas de datos
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+                ('TOPPADDING', (0, 1), (-1, -1), 6),
+                # Bordes
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
+            ]))
+            story.append(monthly_table)
+            story.append(Spacer(1, 10))
+            
+            # Métricas generales con diseño mejorado
+            story.append(Paragraph("MÉTRICAS GENERALES", section_style))
+            
+            # Crear tabla para métricas generales
+            general_metrics_data = [
+                ["MÉTRICA", "VALOR"],
+                ["Promedio Total", format_timedelta(report['avg_duration'])],
+                ["Mediana Total", format_timedelta(report['median_duration'])]
+            ]
+            
+            general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
+            general_metrics_table.setStyle(TableStyle([
+                # Encabezado
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+                ('TOPPADDING', (0, 0), (-1, 0), 10),
+                # Filas de datos
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+                ('TOPPADDING', (0, 1), (-1, -1), 6),
+                # Bordes
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60'))
+            ]))
+            story.append(general_metrics_table)
+            story.append(Spacer(1, 10))
+            
+            # Top 5 Issues más largos
+            story.append(Paragraph("TOP 5 ISSUES MÁS LARGOS", section_style))
+            top_issues_data = [["ISSUE ID", "DURACIÓN"]]
+            for item in report["top_issues"]:
+                top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
+            
+            top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
+            top_issues_table.setStyle(TableStyle([
+                # Encabezado
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+                ('TOPPADDING', (0, 0), (-1, 0), 10),
+                # Filas de datos
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+                ('TOPPADDING', (0, 1), (-1, -1), 6),
+                # Bordes
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
+            ]))
+            story.append(top_issues_table)
+        else:
+            story.append(Paragraph("No se encontraron 'Issues' que cumplan los criterios.", normal_style))
+    
+    story.append(PageBreak())
+    
+    # PÁGINA 2: Segundo reporte individual (Stefano Sanchez)
+    if len(reports_data) > 1:
+        report = reports_data[1]
+        # Formatear el título del reporte
+        title_parts = report["title"].split(": ")
+        if len(title_parts) > 1:
+            report_type = title_parts[0].lower()
+            user_name = title_parts[1].upper()
+            # Capitalizar la primera letra del tipo de reporte
+            if report_type == "reporte individual":
+                report_type = "Reporte individual"
+            elif report_type == "reporte combinado":
+                report_type = "Reporte combinado"
+            formatted_title = f"{report_type}: {user_name}"
+        else:
+            formatted_title = report["title"]
+        
+        story.append(Paragraph(formatted_title, section_style))
+        
+        if report["has_data"]:
+            # Desglose mensual
+            story.append(Paragraph("DESGLOSE MENSUAL", section_style))
+            
+            monthly_data = [["MES", "CANTIDAD", "PROMEDIO", "MEDIANA"]]
+            for item in report["monthly_breakdown"]:
+                monthly_data.append([
+                    item["month"],
+                    str(item["count"]),
+                    format_timedelta(item["avg_duration"]),
+                    format_timedelta(item["median_duration"])
+                ])
+            
+            monthly_table = Table(monthly_data, colWidths=[2.2*inch, 1*inch, 1.4*inch, 1.4*inch])
+            monthly_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
+            ]))
+            story.append(monthly_table)
+            story.append(Spacer(1, 25))
+            
+            # Métricas generales
+            story.append(Paragraph("MÉTRICAS GENERALES", section_style))
+            
+            general_metrics_data = [
+                ["MÉTRICA", "VALOR"],
+                ["Promedio Total", format_timedelta(report['avg_duration'])],
+                ["Mediana Total", format_timedelta(report['median_duration'])]
+            ]
+            
+            general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
+            general_metrics_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60'))
+            ]))
+            story.append(general_metrics_table)
+            story.append(Spacer(1, 25))
+            
+            # Top 5 Issues más largos
+            story.append(Paragraph("TOP 5 ISSUES MÁS LARGOS", section_style))
+            top_issues_data = [["ISSUE ID", "DURACIÓN"]]
+            for item in report["top_issues"]:
+                top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
+            
+            top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
+            top_issues_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
+            ]))
+            story.append(top_issues_table)
+        else:
+            story.append(Paragraph("No se encontraron 'Issues' que cumplan los criterios.", normal_style))
+    
+    story.append(PageBreak())
+    
+    # PÁGINA 3: Reporte combinado
+    if len(reports_data) > 2:
+        report = reports_data[2]
+        # Formatear el título del reporte
+        title_parts = report["title"].split(": ")
+        if len(title_parts) > 1:
+            report_type = title_parts[0].lower()
+            user_name = title_parts[1].upper()
+            # Capitalizar la primera letra del tipo de reporte
+            if report_type == "reporte individual":
+                report_type = "Reporte individual"
+            elif report_type == "reporte combinado":
+                report_type = "Reporte combinado"
+            formatted_title = f"{report_type}: {user_name}"
+        else:
+            formatted_title = report["title"]
+        
+        story.append(Paragraph(formatted_title, section_style))
+        
+        if report["has_data"]:
+            # Desglose mensual
+            story.append(Paragraph("DESGLOSE MENSUAL", section_style))
+            
+            monthly_data = [["MES", "CANTIDAD", "PROMEDIO", "MEDIANA"]]
+            for item in report["monthly_breakdown"]:
+                monthly_data.append([
+                    item["month"],
+                    str(item["count"]),
+                    format_timedelta(item["avg_duration"]),
+                    format_timedelta(item["median_duration"])
+                ])
+            
+            monthly_table = Table(monthly_data, colWidths=[2.2*inch, 1*inch, 1.4*inch, 1.4*inch])
+            monthly_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
+            ]))
+            story.append(monthly_table)
+            story.append(Spacer(1, 25))
+            
+            # Métricas generales
+            story.append(Paragraph("MÉTRICAS GENERALES", section_style))
+            
+            general_metrics_data = [
+                ["MÉTRICA", "VALOR"],
+                ["Promedio Total", format_timedelta(report['avg_duration'])],
+                ["Mediana Total", format_timedelta(report['median_duration'])]
+            ]
+            
+            general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
+            general_metrics_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60'))
+            ]))
+            story.append(general_metrics_table)
+            story.append(Spacer(1, 25))
+            
+            # Top 5 Issues más largos
+            story.append(Paragraph("TOP 5 ISSUES MÁS LARGOS", section_style))
+            top_issues_data = [["ISSUE ID", "DURACIÓN"]]
+            for item in report["top_issues"]:
+                top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
+            
+            top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
+            top_issues_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
+            ]))
+            story.append(top_issues_table)
+        else:
+            story.append(Paragraph("No se encontraron 'Issues' que cumplan los criterios.", normal_style))
+    
+    # Pie de página profesional
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=styles['Normal'],
+        fontSize=8,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#012f60'),
+        fontName='Helvetica'
+    )
+    
+    # Agregar pie de página en la última página
+    current_date = datetime.now().strftime("%d/%m/%Y %H:%M")
+    footer_text = f"Reporte generado el {current_date} | Dashboard de Métricas de Soporte IT"
+    story.append(Spacer(1, 20))
+    story.append(Paragraph(footer_text, footer_style))
+    
+    # Generar el PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
 # --- APLICACIÓN FLASK ---
 app = Flask(__name__)
 
@@ -131,6 +580,65 @@ def dashboard():
 
     # Pasamos la función format_timedelta al template para poder usarla
     return render_template('index.html', reports=reports_data, format_timedelta=format_timedelta, START_DATE=START_DATE)
+
+@app.route('/export-pdf')
+def export_pdf():
+    """Exporta los reportes como PDF"""
+    print("Generando reporte PDF...")
+    reports_data = []
+    
+    report_definitions = [
+        {"title": "REPORTE INDIVIDUAL: Geleser Pimentel", "users": ["Geleser Pimentel"]},
+        {"title": "REPORTE INDIVIDUAL: Stefano Sanchez", "users": ["Stefano Sanchez"]},
+        {"title": "REPORTE COMBINADO", "users": USERS_TO_QUERY}
+    ]
+
+    for definition in report_definitions:
+        results, details, monthly_durations = get_done_tickets_by_month(definition["users"])
+        
+        report = {"title": definition["title"], "has_data": False}
+        
+        if results:
+            report["has_data"] = True
+            
+            # Pre-procesa todos los datos aquí, en Python
+            monthly_breakdown = []
+            sorted_months = sorted(results.items(), key=lambda item: (int(item[0].split(" ")[1]), meses_es.index(item[0].split(" ")[0])), reverse=True)
+            
+            for month, count in sorted_months:
+                month_data = {"month": month, "count": count}
+                durations_this_month = monthly_durations.get(month, [])
+                if durations_this_month:
+                    month_data["avg_duration"] = sum(durations_this_month, timedelta()) / len(durations_this_month)
+                    month_data["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations_this_month]))
+                else:
+                    month_data["avg_duration"] = None
+                    month_data["median_duration"] = None
+                monthly_breakdown.append(month_data)
+
+            report["monthly_breakdown"] = monthly_breakdown
+
+            if details:
+                durations = [d['duration'] for d in details]
+                report["avg_duration"] = sum(durations, timedelta()) / len(durations)
+                report["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations]))
+                report["top_issues"] = sorted(details, key=lambda x: x['duration'], reverse=True)[:5]
+        
+        reports_data.append(report)
+    
+    # Generar el PDF
+    pdf_buffer = generate_pdf_report(reports_data)
+    
+    # Generar nombre de archivo con fecha
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    filename = f"reporte_metricas_soporte_{current_date}.pdf"
+    
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf'
+    )
 
 if __name__ == '__main__':
     #app.run(debug=True)

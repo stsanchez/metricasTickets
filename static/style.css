@@ -34,6 +34,33 @@ header {
     color: #012f60;
     font-weight: 300;
 }
+
+.download-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #012f60 0%, #3498db 100%);
+    color: white;
+    padding: 14px 28px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(1, 47, 96, 0.3);
+    border: none;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+.download-btn:hover {
+    background: linear-gradient(135deg, #012f60 0%, #2980b9 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(1, 47, 96, 0.4);
+}
+
+.download-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(1, 47, 96, 0.3);
+}
 /* === FIN DEL CAMBIO === */
 
 

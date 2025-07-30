@@ -16,6 +16,7 @@
         <div class="header-text">
             <h1>Dashboard de Métricas de Soporte</h1>
             <p>Reportes generados para 'Issues' creados desde el {{ START_DATE }}</p>
+            <a href="{{ url_for('export_pdf') }}" class="download-btn">📄 Descargar Reporte PDF</a>
         </div>
     </header>
     <div class="container">
