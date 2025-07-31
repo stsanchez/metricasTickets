@@ -189,16 +189,15 @@ def generate_pdf_report(reports_data):
             story.append(Paragraph("DESGLOSE MENSUAL", section_style))
             
             # Tabla mejorada para el desglose mensual
-            monthly_data = [["MES", "CANTIDAD", "PROMEDIO", "MEDIANA"]]
+            monthly_data = [["MES", "CANTIDAD", "PROMEDIO"]]
             for item in report["monthly_breakdown"]:
                 monthly_data.append([
                     item["month"],
                     str(item["count"]),
-                    format_timedelta(item["avg_duration"]),
                     format_timedelta(item["median_duration"])
                 ])
             
-            monthly_table = Table(monthly_data, colWidths=[2.2*inch, 1*inch, 1.4*inch, 1.4*inch])
+            monthly_table = Table(monthly_data, colWidths=[2.5*inch, 1.5*inch, 2*inch])
             monthly_table.setStyle(TableStyle([
                 # Encabezado
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
@@ -228,10 +227,9 @@ def generate_pdf_report(reports_data):
             # Crear tabla para métricas generales
             general_metrics_data = [
                 ["MÉTRICA", "VALOR"],
-                ["Promedio Total", format_timedelta(report['avg_duration'])],
-                ["Mediana Total", format_timedelta(report['median_duration'])]
+                ["Promedio de Medianas Mensuales", format_timedelta(report['avg_duration'])]
             ]
-            
+            #comentario de prueba
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
             general_metrics_table.setStyle(TableStyle([
                 # Encabezado
@@ -311,16 +309,15 @@ def generate_pdf_report(reports_data):
             # Desglose mensual
             story.append(Paragraph("DESGLOSE MENSUAL", section_style))
             
-            monthly_data = [["MES", "CANTIDAD", "PROMEDIO", "MEDIANA"]]
+            monthly_data = [["MES", "CANTIDAD", "PROMEDIO"]]
             for item in report["monthly_breakdown"]:
                 monthly_data.append([
                     item["month"],
                     str(item["count"]),
-                    format_timedelta(item["avg_duration"]),
                     format_timedelta(item["median_duration"])
                 ])
             
-            monthly_table = Table(monthly_data, colWidths=[2.2*inch, 1*inch, 1.4*inch, 1.4*inch])
+            monthly_table = Table(monthly_data, colWidths=[2.5*inch, 1.5*inch, 2*inch])
             monthly_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -346,8 +343,7 @@ def generate_pdf_report(reports_data):
             
             general_metrics_data = [
                 ["MÉTRICA", "VALOR"],
-                ["Promedio Total", format_timedelta(report['avg_duration'])],
-                ["Mediana Total", format_timedelta(report['median_duration'])]
+                ["Promedio de Medianas Mensuales", format_timedelta(report['avg_duration'])]
             ]
             
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
@@ -423,16 +419,15 @@ def generate_pdf_report(reports_data):
             # Desglose mensual
             story.append(Paragraph("DESGLOSE MENSUAL", section_style))
             
-            monthly_data = [["MES", "CANTIDAD", "PROMEDIO", "MEDIANA"]]
+            monthly_data = [["MES", "CANTIDAD", "PROMEDIO"]]
             for item in report["monthly_breakdown"]:
                 monthly_data.append([
                     item["month"],
                     str(item["count"]),
-                    format_timedelta(item["avg_duration"]),
                     format_timedelta(item["median_duration"])
                 ])
             
-            monthly_table = Table(monthly_data, colWidths=[2.2*inch, 1*inch, 1.4*inch, 1.4*inch])
+            monthly_table = Table(monthly_data, colWidths=[2.5*inch, 1.5*inch, 2*inch])
             monthly_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -458,8 +453,7 @@ def generate_pdf_report(reports_data):
             
             general_metrics_data = [
                 ["MÉTRICA", "VALOR"],
-                ["Promedio Total", format_timedelta(report['avg_duration'])],
-                ["Mediana Total", format_timedelta(report['median_duration'])]
+                ["Promedio de Medianas Mensuales", format_timedelta(report['avg_duration'])]
             ]
             
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
@@ -572,7 +566,21 @@ def dashboard():
 
             if details:
                 durations = [d['duration'] for d in details]
-                report["avg_duration"] = sum(durations, timedelta()) / len(durations)
+                # Calcular promedio de las medianas mensuales
+                monthly_medians = []
+                for month, count in sorted_months:
+                    durations_this_month = monthly_durations.get(month, [])
+                    if durations_this_month:
+                        # Calcular la mediana de este mes
+                        month_median = statistics.median([td.total_seconds() for td in durations_this_month])
+                        monthly_medians.append(month_median)
+                
+                if monthly_medians:
+                    avg_median_seconds = sum(monthly_medians) / len(monthly_medians)
+                    report["avg_duration"] = timedelta(seconds=avg_median_seconds)
+                else:
+                    report["avg_duration"] = timedelta(0)
+                
                 report["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations]))
                 report["top_issues"] = sorted(details, key=lambda x: x['duration'], reverse=True)[:5]
         
@@ -620,7 +628,21 @@ def export_pdf():
 
             if details:
                 durations = [d['duration'] for d in details]
-                report["avg_duration"] = sum(durations, timedelta()) / len(durations)
+                # Calcular promedio de las medianas mensuales
+                monthly_medians = []
+                for month, count in sorted_months:
+                    durations_this_month = monthly_durations.get(month, [])
+                    if durations_this_month:
+                        # Calcular la mediana de este mes
+                        month_median = statistics.median([td.total_seconds() for td in durations_this_month])
+                        monthly_medians.append(month_median)
+                
+                if monthly_medians:
+                    avg_median_seconds = sum(monthly_medians) / len(monthly_medians)
+                    report["avg_duration"] = timedelta(seconds=avg_median_seconds)
+                else:
+                    report["avg_duration"] = timedelta(0)
+                
                 report["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations]))
                 report["top_issues"] = sorted(details, key=lambda x: x['duration'], reverse=True)[:5]
         
