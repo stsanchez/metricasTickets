@@ -80,7 +80,7 @@ header {
     padding: 25px;
     flex: 1;
     min-width: 400px;
-    max-width: 500px;
+    max-width: 720px;
     transition: transform 0.2s ease-in-out;
 }
 
@@ -118,6 +118,10 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 8px;
+    overflow: hidden;
 }
 
 .stats-section li:last-child {
@@ -129,6 +133,29 @@ header {
     color: #7f8c8d;
     white-space: nowrap;
     margin-left: 10px;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none;
+}
+
+.monthly-left {
+    flex: 0 1 auto;
+    min-width: 40%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.monthly-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: auto;
+    justify-content: flex-end;
 }
 
 .no-data {
@@ -136,4 +163,85 @@ header {
     text-align: center;
     padding: 20px;
     font-style: italic;
+}
+
+/* Botón de ver detalle */
+.view-details-btn {
+    margin-left: 6px;
+    background: #eef5fb;
+    color: #012f60;
+    border: 1px solid #cfe2f3;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.view-details-btn:hover {
+    background: #dbeaf7;
+}
+
+/* Modal */
+.modal-overlay[aria-hidden="true"] {
+    display: none;
+}
+
+.modal-overlay[aria-hidden="false"] {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal {
+    background: #fff;
+    width: 90%;
+    max-width: 560px;
+    height: 70vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #012f60;
+    color: #fff;
+}
+
+.modal-body {
+    padding: 16px 18px;
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.close-btn {
+    background: transparent;
+    color: #fff;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.ticket-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ticket-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.monthly-metrics b {
+    font-weight: 600;
 }

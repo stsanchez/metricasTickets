@@ -55,7 +55,7 @@ def get_done_tickets_by_month(user_list):
         response = requests.post(url=wiql_url, headers=headers, json=query)
         response.raise_for_status()
         work_items = response.json().get("workItems", [])
-        if not work_items: return {}, [], {}
+        if not work_items: return {}, [], {}, {}
         ticket_ids = [item['id'] for item in work_items]
         print(f"✅ Se encontraron {len(ticket_ids)} 'Issues' que cumplen los criterios.")
         fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.StateChangeDate"]
@@ -70,18 +70,20 @@ def get_done_tickets_by_month(user_list):
             all_detailed_tickets.extend(batch_response.json().get("value", []))
         print("📊 Agrupando resultados y calculando duraciones...")
         monthly_counts, ticket_details, monthly_durations = defaultdict(int), [], defaultdict(list)
+        monthly_ticket_details = defaultdict(list)
         for ticket in all_detailed_tickets:
             creation_date = datetime.fromisoformat(ticket['fields']['System.CreatedDate'].replace('Z', '+00:00'))
             completion_date = datetime.fromisoformat(ticket['fields']['Microsoft.VSTS.Common.StateChangeDate'].replace('Z', '+00:00'))
             duration = business_time_between(creation_date, completion_date)
-            ticket_details.append({'id': ticket['id'], 'duration': duration})
             month_key = f"{meses_es[completion_date.month - 1]} {completion_date.year}"
+            ticket_details.append({'id': ticket['id'], 'duration': duration})
             monthly_counts[month_key] += 1
             monthly_durations[month_key].append(duration)
-        return monthly_counts, ticket_details, monthly_durations
+            monthly_ticket_details[month_key].append({'id': ticket['id'], 'duration': duration})
+        return monthly_counts, ticket_details, monthly_durations, monthly_ticket_details
     except Exception as e:
         print(f"❌ Error: {e}")
-        return None, None, None
+        return {}, [], {}, {}
 
 def format_timedelta(td):
     if not isinstance(td, timedelta) or td.total_seconds() <= 0: return "N/A"
@@ -574,7 +576,7 @@ def dashboard():
     ]
 
     for definition in report_definitions:
-        results, details, monthly_durations = get_done_tickets_by_month(definition["users"])
+        results, details, monthly_durations, monthly_ticket_details = get_done_tickets_by_month(definition["users"])
         
         report = {"title": definition["title"], "has_data": False}
         
@@ -597,6 +599,7 @@ def dashboard():
                 monthly_breakdown.append(month_data)
 
             report["monthly_breakdown"] = monthly_breakdown
+            report["monthly_details"] = monthly_ticket_details
 
             if details:
                 durations = [d['duration'] for d in details]
@@ -636,7 +639,7 @@ def export_pdf():
     ]
 
     for definition in report_definitions:
-        results, details, monthly_durations = get_done_tickets_by_month(definition["users"])
+        results, details, monthly_durations, monthly_ticket_details = get_done_tickets_by_month(definition["users"])
         
         report = {"title": definition["title"], "has_data": False}
         
@@ -659,6 +662,7 @@ def export_pdf():
                 monthly_breakdown.append(month_data)
 
             report["monthly_breakdown"] = monthly_breakdown
+            report["monthly_details"] = monthly_ticket_details
 
             if details:
                 durations = [d['duration'] for d in details]

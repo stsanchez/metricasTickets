@@ -32,11 +32,33 @@
                     <ul>
                         {% for item in report.monthly_breakdown %}
                             <li>
-                                <strong>🗓️ {{ item.month }}:</strong> {{ item.count }} Issues
-                                <span class="monthly-metrics">
-                                    (Promedio: {{ format_timedelta(item.avg_duration) }} | Mediana: {{ format_timedelta(item.median_duration) }})
+                                <span class="monthly-left"><strong>🗓️ {{ item.month }}:</strong> {{ item.count }} Issues</span>
+                                <span class="monthly-right">
+                                    <span class="monthly-metrics">
+                                        (Promedio: {{ format_timedelta(item.avg_duration) }} | Mediana: {{ format_timedelta(item.median_duration) }})
+                                    </span>
+                                    {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
+                                        <button class="view-details-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" title="Ver detalle">👁️</button>
+                                    {% endif %}
                                 </span>
                             </li>
+                            {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
+                                <div id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" class="modal-overlay" aria-hidden="true">
+                                    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ loop.index0 }}">
+                                        <div class="modal-header">
+                                            <h4 id="modal-title-{{ loop.index0 }}">Detalle de {{ item.month }}</h4>
+                                            <button class="close-btn" aria-label="Cerrar">×</button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <ul class="ticket-list">
+                                                {% for t in report.monthly_details[item.month] %}
+                                                    <li><strong>Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     </ul>
                 </div>
@@ -59,5 +81,31 @@
         {% endfor %}
     </div>
 
+    <script>
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.view-details-btn');
+            if (btn) {
+                var id = btn.getAttribute('data-modal-id');
+                var modal = document.getElementById(id);
+                if (modal) {
+                    modal.setAttribute('aria-hidden', 'false');
+                }
+            }
+            if (e.target.classList.contains('modal-overlay')) {
+                e.target.setAttribute('aria-hidden', 'true');
+            }
+            if (e.target.classList.contains('close-btn')) {
+                var overlay = e.target.closest('.modal-overlay');
+                if (overlay) overlay.setAttribute('aria-hidden', 'true');
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay[aria-hidden="false"]').forEach(function (m) {
+                    m.setAttribute('aria-hidden', 'true');
+                });
+            }
+        });
+    </script>
 </body>
 </html>
