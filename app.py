@@ -1,7 +1,7 @@
 from flask import Flask, render_template, send_file
 import requests
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from collections import defaultdict
 import math
 import statistics
@@ -14,6 +14,7 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import io
+from zoneinfo import ZoneInfo
 
 load_dotenv()
 PAT = os.getenv("PAT")
@@ -31,6 +32,11 @@ API_VERSION_WIQL = "7.1-preview.2"
 API_VERSION_BATCH = "7.1-preview.1"
 meses_es = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
             "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"]
+# Configuración de horario laboral
+TIMEZONE = os.getenv("TIMEZONE", "UTC")
+WORK_START_HOUR = 8
+WORK_END_HOUR = 19
+BUSINESS_DAYS = {0, 1, 2, 3, 4}  # 0 = Lunes ... 6 = Domingo
 
 # --- LÓGICA DE DATOS ---
 def get_done_tickets_by_month(user_list):
@@ -67,7 +73,7 @@ def get_done_tickets_by_month(user_list):
         for ticket in all_detailed_tickets:
             creation_date = datetime.fromisoformat(ticket['fields']['System.CreatedDate'].replace('Z', '+00:00'))
             completion_date = datetime.fromisoformat(ticket['fields']['Microsoft.VSTS.Common.StateChangeDate'].replace('Z', '+00:00'))
-            duration = completion_date - creation_date
+            duration = business_time_between(creation_date, completion_date)
             ticket_details.append({'id': ticket['id'], 'duration': duration})
             month_key = f"{meses_es[completion_date.month - 1]} {completion_date.year}"
             monthly_counts[month_key] += 1
@@ -88,6 +94,34 @@ def format_timedelta(td):
     if minutes > 0: parts.append(f"{minutes}m")
     if not parts: return "< 1m"
     return " ".join(parts)
+
+def business_time_between(start_dt: datetime, end_dt: datetime) -> timedelta:
+    """Calcula el tiempo transcurrido solo dentro del horario laboral definido.
+
+    Considera días hábiles (lunes a viernes) y horas entre WORK_START_HOUR y WORK_END_HOUR
+    en la zona horaria TIMEZONE. Excluye fines de semana y tiempo fuera de ese rango.
+    """
+    try:
+        if not start_dt or not end_dt or end_dt <= start_dt:
+            return timedelta(0)
+        tz = ZoneInfo(TIMEZONE)
+        start_local = start_dt.astimezone(tz)
+        end_local = end_dt.astimezone(tz)
+        total = timedelta(0)
+        current_date = start_local.date()
+        end_date = end_local.date()
+        while current_date <= end_date:
+            if current_date.weekday() in BUSINESS_DAYS:
+                day_start = datetime.combine(current_date, time(WORK_START_HOUR, 0, 0), tzinfo=tz)
+                day_end = datetime.combine(current_date, time(WORK_END_HOUR, 0, 0), tzinfo=tz)
+                interval_start = max(start_local, day_start)
+                interval_end = min(end_local, day_end)
+                if interval_end > interval_start:
+                    total += interval_end - interval_start
+            current_date += timedelta(days=1)
+        return total
+    except Exception:
+        return timedelta(0)
 
 def generate_pdf_report(reports_data):
     """Genera un reporte PDF con los datos de métricas"""
@@ -227,7 +261,7 @@ def generate_pdf_report(reports_data):
             # Crear tabla para métricas generales
             general_metrics_data = [
                 ["MÉTRICA", "VALOR"],
-                ["Promedio de Medianas Mensuales", format_timedelta(report['avg_duration'])]
+                ["Promedio mensual", format_timedelta(report['avg_duration'])]
             ]
             #comentario de prueba
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
@@ -343,7 +377,7 @@ def generate_pdf_report(reports_data):
             
             general_metrics_data = [
                 ["MÉTRICA", "VALOR"],
-                ["Promedio de Medianas Mensuales", format_timedelta(report['avg_duration'])]
+                ["Promedio mensual", format_timedelta(report['avg_duration'])]
             ]
             
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
@@ -453,7 +487,7 @@ def generate_pdf_report(reports_data):
             
             general_metrics_data = [
                 ["MÉTRICA", "VALOR"],
-                ["Promedio de Medianas Mensuales", format_timedelta(report['avg_duration'])]
+                ["Promedio mensual", format_timedelta(report['avg_duration'])]
             ]
             
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
