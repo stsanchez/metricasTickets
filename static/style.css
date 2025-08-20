@@ -61,6 +61,10 @@ header {
     transform: translateY(-1px);
     box-shadow: 0 3px 10px rgba(1, 47, 96, 0.3);
 }
+
+.download-btn i {
+    margin-right: 8px;
+}
 /* === FIN DEL CAMBIO === */
 
 
@@ -97,13 +101,26 @@ header {
 }
 
 .stats-section {
+    margin-top: 35px;
+    padding-top: 25px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.stats-section:first-of-type {
     margin-top: 25px;
+    padding-top: 0;
+    border-top: none;
 }
 
 .stats-section h3 {
     margin-bottom: 15px;
     font-size: 1.1em;
     color: #012f60;
+}
+
+.stats-section h3 i {
+    margin-right: 8px;
+    color: #3498db;
 }
 
 /* Estilo de las listas */
@@ -128,17 +145,16 @@ header {
     border-bottom: none;
 }
 
-.monthly-metrics {
-    font-size: 0.9em;
-    color: #7f8c8d;
-    white-space: nowrap;
-    margin-left: 10px;
+.monthly-left {
+    flex: 0 1 auto;
+    min-width: 40%;
     overflow: visible;
     text-overflow: clip;
-    max-width: none;
+    white-space: nowrap;
+    font-weight: 500;
 }
 
-.monthly-left {
+.priority-left {
     flex: 0 1 auto;
     min-width: 40%;
     overflow: visible;
@@ -172,13 +188,22 @@ header {
     color: #012f60;
     border: 1px solid #cfe2f3;
     border-radius: 6px;
-    padding: 4px 8px;
+    padding: 6px 10px;
     cursor: pointer;
     transition: background 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
 }
 
 .view-details-btn:hover {
     background: #dbeaf7;
+}
+
+.view-details-btn i {
+    font-size: 14px;
 }
 
 /* Modal */
@@ -227,8 +252,49 @@ header {
     background: transparent;
     color: #fff;
     border: none;
-    font-size: 20px;
+    font-size: 18px;
     cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Secciones del modal */
+.monthly-metrics-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.monthly-metrics-section h5 {
+    margin: 0 0 10px 0;
+    color: #012f60;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.priority-metrics-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.priority-metrics-list li {
+    padding: 4px 0;
+    border-bottom: none;
+    font-size: 13px;
+    color: #555;
+}
+
+.tickets-section h5 {
+    margin: 0 0 10px 0;
+    color: #012f60;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .ticket-list {
@@ -240,6 +306,30 @@ header {
 .ticket-list li {
     padding: 8px 0;
     border-bottom: 1px solid #ecf0f1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ticket-list li:last-child {
+    border-bottom: none;
+}
+
+.priority-badge {
+    background: #e74c3c;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 20px;
+    text-align: center;
+}
+
+.duration {
+    margin-left: auto;
+    color: #7f8c8d;
+    font-size: 13px;
 }
 
 .monthly-metrics b {

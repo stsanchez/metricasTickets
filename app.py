@@ -55,10 +55,10 @@ def get_done_tickets_by_month(user_list):
         response = requests.post(url=wiql_url, headers=headers, json=query)
         response.raise_for_status()
         work_items = response.json().get("workItems", [])
-        if not work_items: return {}, [], {}, {}
+        if not work_items: return {}, [], {}, {}, {}, {}, {}, {}, {}
         ticket_ids = [item['id'] for item in work_items]
         print(f"✅ Se encontraron {len(ticket_ids)} 'Issues' que cumplen los criterios.")
-        fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.StateChangeDate"]
+        fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.StateChangeDate", "Microsoft.VSTS.Common.Priority"]
         batch_url = f"{ORG_URL}/_apis/wit/workitemsbatch?api-version={API_VERSION_BATCH}"
         all_detailed_tickets, chunk_size = [], 200
         for i in range(0, len(ticket_ids), chunk_size):
@@ -71,19 +71,33 @@ def get_done_tickets_by_month(user_list):
         print("📊 Agrupando resultados y calculando duraciones...")
         monthly_counts, ticket_details, monthly_durations = defaultdict(int), [], defaultdict(list)
         monthly_ticket_details = defaultdict(list)
+        priority_counts, priority_durations = defaultdict(int), defaultdict(list)
+        priority_ticket_details = defaultdict(list)
+        monthly_priority_counts, monthly_priority_durations = defaultdict(lambda: defaultdict(int)), defaultdict(lambda: defaultdict(list))
         for ticket in all_detailed_tickets:
             creation_date = datetime.fromisoformat(ticket['fields']['System.CreatedDate'].replace('Z', '+00:00'))
             completion_date = datetime.fromisoformat(ticket['fields']['Microsoft.VSTS.Common.StateChangeDate'].replace('Z', '+00:00'))
             duration = business_time_between(creation_date, completion_date)
+            # Prioridad (1..4)
+            priority_value = ticket['fields'].get('Microsoft.VSTS.Common.Priority')
+            if isinstance(priority_value, int) and 1 <= priority_value <= 4:
+                priority_counts[priority_value] += 1
+                priority_durations[priority_value].append(duration)
+                priority_ticket_details[priority_value].append({'id': ticket['id'], 'duration': duration, 'priority': priority_value})
             month_key = f"{meses_es[completion_date.month - 1]} {completion_date.year}"
-            ticket_details.append({'id': ticket['id'], 'duration': duration})
+            ticket_details.append({'id': ticket['id'], 'duration': duration, 'priority': priority_value})
             monthly_counts[month_key] += 1
             monthly_durations[month_key].append(duration)
-            monthly_ticket_details[month_key].append({'id': ticket['id'], 'duration': duration})
-        return monthly_counts, ticket_details, monthly_durations, monthly_ticket_details
+            monthly_ticket_details[month_key].append({'id': ticket['id'], 'duration': duration, 'priority': priority_value})
+            
+            # Datos de prioridad por mes
+            if isinstance(priority_value, int) and 1 <= priority_value <= 4:
+                monthly_priority_counts[month_key][priority_value] += 1
+                monthly_priority_durations[month_key][priority_value].append(duration)
+        return monthly_counts, ticket_details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations
     except Exception as e:
         print(f"❌ Error: {e}")
-        return {}, [], {}, {}
+        return {}, [], {}, {}, {}, {}, {}, {}, {}
 
 def format_timedelta(td):
     if not isinstance(td, timedelta) or td.total_seconds() <= 0: return "N/A"
@@ -266,6 +280,13 @@ def generate_pdf_report(reports_data):
                 ["Promedio mensual", format_timedelta(report['avg_duration'])]
             ]
             #comentario de prueba
+            # Agregar desglose por prioridad
+            if report.get('priority_breakdown'):
+                for item in report['priority_breakdown']:
+                    general_metrics_data.append([
+                        f"Prioridad {item['priority']}",
+                        f"{item['count']} tickets (promedio: {format_timedelta(item['avg_duration'])})"
+                    ])
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
             general_metrics_table.setStyle(TableStyle([
                 # Encabezado
@@ -289,10 +310,10 @@ def generate_pdf_report(reports_data):
             story.append(general_metrics_table)
             story.append(Spacer(1, 10))
             
-            # Top 5 Issues más largos
-            story.append(Paragraph("TOP 5 ISSUES MÁS LARGOS", section_style))
+            # Top 3 Issues más largos
+            story.append(Paragraph("TOP 3 ISSUES MÁS LARGOS", section_style))
             top_issues_data = [["ISSUE ID", "DURACIÓN"]]
-            for item in report["top_issues"]:
+            for item in report["top_issues"][:3]:
                 top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
             
             top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
@@ -381,6 +402,13 @@ def generate_pdf_report(reports_data):
                 ["MÉTRICA", "VALOR"],
                 ["Promedio mensual", format_timedelta(report['avg_duration'])]
             ]
+            # Agregar desglose por prioridad
+            if report.get('priority_breakdown'):
+                for item in report['priority_breakdown']:
+                    general_metrics_data.append([
+                        f"Prioridad {item['priority']}",
+                        f"{item['count']} tickets (promedio: {format_timedelta(item['avg_duration'])})"
+                    ])
             
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
             general_metrics_table.setStyle(TableStyle([
@@ -402,10 +430,10 @@ def generate_pdf_report(reports_data):
             story.append(general_metrics_table)
             story.append(Spacer(1, 25))
             
-            # Top 5 Issues más largos
-            story.append(Paragraph("TOP 5 ISSUES MÁS LARGOS", section_style))
+            # Top 3 Issues más largos
+            story.append(Paragraph("TOP 3 ISSUES MÁS LARGOS", section_style))
             top_issues_data = [["ISSUE ID", "DURACIÓN"]]
-            for item in report["top_issues"]:
+            for item in report["top_issues"][:3]:
                 top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
             
             top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
@@ -491,6 +519,13 @@ def generate_pdf_report(reports_data):
                 ["MÉTRICA", "VALOR"],
                 ["Promedio mensual", format_timedelta(report['avg_duration'])]
             ]
+            # Agregar desglose por prioridad
+            if report.get('priority_breakdown'):
+                for item in report['priority_breakdown']:
+                    general_metrics_data.append([
+                        f"Prioridad {item['priority']}",
+                        f"{item['count']} tickets (promedio: {format_timedelta(item['avg_duration'])})"
+                    ])
             
             general_metrics_table = Table(general_metrics_data, colWidths=[2.5*inch, 2.5*inch])
             general_metrics_table.setStyle(TableStyle([
@@ -512,10 +547,10 @@ def generate_pdf_report(reports_data):
             story.append(general_metrics_table)
             story.append(Spacer(1, 25))
             
-            # Top 5 Issues más largos
-            story.append(Paragraph("TOP 5 ISSUES MÁS LARGOS", section_style))
+            # Top 3 Issues más largos
+            story.append(Paragraph("TOP 3 ISSUES MÁS LARGOS", section_style))
             top_issues_data = [["ISSUE ID", "DURACIÓN"]]
-            for item in report["top_issues"]:
+            for item in report["top_issues"][:3]:
                 top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
             
             top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
@@ -576,7 +611,7 @@ def dashboard():
     ]
 
     for definition in report_definitions:
-        results, details, monthly_durations, monthly_ticket_details = get_done_tickets_by_month(definition["users"])
+        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"])
         
         report = {"title": definition["title"], "has_data": False}
         
@@ -600,6 +635,7 @@ def dashboard():
 
             report["monthly_breakdown"] = monthly_breakdown
             report["monthly_details"] = monthly_ticket_details
+            report["priority_details"] = priority_ticket_details
 
             if details:
                 durations = [d['duration'] for d in details]
@@ -620,6 +656,34 @@ def dashboard():
                 
                 report["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations]))
                 report["top_issues"] = sorted(details, key=lambda x: x['duration'], reverse=True)[:5]
+                
+                # Desglose por prioridad
+                priority_breakdown = []
+                for p in [1, 2, 3, 4]:
+                    count_p = priority_counts.get(p, 0)
+                    durations_p = priority_durations.get(p, [])
+                    avg_p = (sum(durations_p, timedelta()) / len(durations_p)) if durations_p else None
+                    priority_breakdown.append({
+                        'priority': p,
+                        'count': count_p,
+                        'avg_duration': avg_p
+                    })
+                report['priority_breakdown'] = priority_breakdown
+                
+                # Desglose por prioridad por mes
+                monthly_priority_breakdown = {}
+                for month in results.keys():
+                    monthly_priority_breakdown[month] = []
+                    for p in [1, 2, 3, 4]:
+                        count_p = monthly_priority_counts.get(month, {}).get(p, 0)
+                        durations_p = monthly_priority_durations.get(month, {}).get(p, [])
+                        avg_p = (sum(durations_p, timedelta()) / len(durations_p)) if durations_p else None
+                        monthly_priority_breakdown[month].append({
+                            'priority': p,
+                            'count': count_p,
+                            'avg_duration': avg_p
+                        })
+                report['monthly_priority_breakdown'] = monthly_priority_breakdown
         
         reports_data.append(report)
 
@@ -639,7 +703,7 @@ def export_pdf():
     ]
 
     for definition in report_definitions:
-        results, details, monthly_durations, monthly_ticket_details = get_done_tickets_by_month(definition["users"])
+        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"])
         
         report = {"title": definition["title"], "has_data": False}
         
@@ -663,6 +727,7 @@ def export_pdf():
 
             report["monthly_breakdown"] = monthly_breakdown
             report["monthly_details"] = monthly_ticket_details
+            report["priority_details"] = priority_ticket_details
 
             if details:
                 durations = [d['duration'] for d in details]
@@ -683,6 +748,34 @@ def export_pdf():
                 
                 report["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations]))
                 report["top_issues"] = sorted(details, key=lambda x: x['duration'], reverse=True)[:5]
+                
+                # Desglose por prioridad
+                priority_breakdown = []
+                for p in [1, 2, 3, 4]:
+                    count_p = priority_counts.get(p, 0)
+                    durations_p = priority_durations.get(p, [])
+                    avg_p = (sum(durations_p, timedelta()) / len(durations_p)) if durations_p else None
+                    priority_breakdown.append({
+                        'priority': p,
+                        'count': count_p,
+                        'avg_duration': avg_p
+                    })
+                report['priority_breakdown'] = priority_breakdown
+                
+                # Desglose por prioridad por mes
+                monthly_priority_breakdown = {}
+                for month in results.keys():
+                    monthly_priority_breakdown[month] = []
+                    for p in [1, 2, 3, 4]:
+                        count_p = monthly_priority_counts.get(month, {}).get(p, 0)
+                        durations_p = monthly_priority_durations.get(month, {}).get(p, [])
+                        avg_p = (sum(durations_p, timedelta()) / len(durations_p)) if durations_p else None
+                        monthly_priority_breakdown[month].append({
+                            'priority': p,
+                            'count': count_p,
+                            'avg_duration': avg_p
+                        })
+                report['monthly_priority_breakdown'] = monthly_priority_breakdown
         
         reports_data.append(report)
     
