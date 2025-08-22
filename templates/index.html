@@ -20,6 +20,7 @@
             <a href="{{ url_for('export_pdf') }}" class="download-btn"><i class="fas fa-file-pdf"></i> Descargar Reporte PDF</a>
         </div>
     </header>
+
     <div class="container">
         {% for report in reports %}
         <div class="report-card">
@@ -36,48 +37,14 @@
                                 <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
                                 <span class="monthly-right">
                                     {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
-                                        <button class="view-details-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" title="Ver detalle"><i class="fas fa-eye"></i></button>
+                                        <button class="view-details-btn" 
+                                                data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
+                                                title="Ver detalle">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                     {% endif %}
                                 </span>
                             </li>
-                            {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
-                                <div id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" class="modal-overlay" aria-hidden="true">
-                                    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-{{ loop.index0 }}">
-                                        <div class="modal-header">
-                                            <h4 id="modal-title-{{ loop.index0 }}">Detalle de {{ item.month }}</h4>
-                                            <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            {% if report.monthly_priority_breakdown and report.monthly_priority_breakdown.get(item.month) %}
-                                                <div class="monthly-metrics-section">
-                                                    <h5>Métricas por Prioridad</h5>
-                                                    <ul class="priority-metrics-list">
-                                                        {% for priority_item in report.monthly_priority_breakdown[item.month] %}
-                                                            <li>
-                                                                <strong>Prioridad {{ priority_item.priority }}:</strong>
-                                                                {{ priority_item.count }} tickets
-                                                                (promedio: {{ format_timedelta(priority_item.avg_duration) }})
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-                                            <div class="tickets-section">
-                                                <h5>Listado de Issues</h5>
-                                                <ul class="ticket-list">
-                                                    {% for t in report.monthly_details[item.month] %}
-                                                        <li>
-                                                            <strong>Issue #{{ t.id }}</strong>
-                                                            <span class="priority-badge">{{ t.priority }}</span>
-                                                            <span class="duration">{{ format_timedelta(t.duration) }}</span>
-                                                        </li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
                         {% endfor %}
                     </ul>
                 </div>
@@ -95,26 +62,13 @@
                                         (promedio: {{ format_timedelta(item.avg_duration) }})
                                     </span>
                                     {% if report.title.startswith('REPORTE INDIVIDUAL') and report.priority_details and report.priority_details.get(item.priority) %}
-                                        <button class="view-details-btn" data-modal-id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}" title="Ver detalle"><i class="fas fa-eye"></i></button>
+                                        <button class="view-details-btn" 
+                                                data-modal-id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}" 
+                                                title="Ver detalle">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                     {% endif %}
                                 </li>
-                                {% if report.title.startswith('REPORTE INDIVIDUAL') and report.priority_details and report.priority_details.get(item.priority) %}
-                                    <div id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}" class="modal-overlay" aria-hidden="true">
-                                        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-priority-title-{{ item.priority }}">
-                                            <div class="modal-header">
-                                                <h4 id="modal-priority-title-{{ item.priority }}">Detalle de Prioridad {{ item.priority }}</h4>
-                                                <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <ul class="ticket-list">
-                                                    {% for t in report.priority_details[item.priority] %}
-                                                        <li><strong>Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
                             {% endfor %}
                         </ul>
                     {% endif %}
@@ -125,31 +79,115 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>Los 5 Issues que tomaron más tiempo en resolverse</span>
                         {% if report.title.startswith('REPORTE INDIVIDUAL') and report.top_issues %}
-                            <button class="view-details-btn" data-modal-id="modal-top5-{{ report.title|replace(' ', '-') }}" title="Ver detalle"><i class="fas fa-eye"></i></button>
+                            <button class="view-details-btn" 
+                                    data-modal-id="modal-top5-{{ report.title|replace(' ', '-') }}" 
+                                    title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         {% endif %}
                     </div>
-                    {% if report.title.startswith('REPORTE INDIVIDUAL') and report.top_issues %}
-                        <div id="modal-top5-{{ report.title|replace(' ', '-') }}" class="modal-overlay" aria-hidden="true">
-                            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-top5-title">
+                </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- === MODALES (fuera de los reportes, al final del body) === -->
+    {% for report in reports %}
+        {% if report.title.startswith('REPORTE INDIVIDUAL') %}
+            
+            {% for item in report.monthly_breakdown %}
+                {% if report.monthly_details and report.monthly_details.get(item.month) %}
+                    <div id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
+                         class="modal-overlay" aria-hidden="true">
+                        <div class="modal" role="dialog" aria-modal="true">
+                            <div class="modal-header">
+                                <h4>Detalle de {{ item.month }}</h4>
+                                <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="modal-body">
+                                {% if report.monthly_priority_breakdown and report.monthly_priority_breakdown.get(item.month) %}
+                                    <div class="monthly-metrics-section">
+                                        <h5>Métricas por Prioridad</h5>
+                                        <ul class="priority-metrics-list">
+                                            {% for priority_item in report.monthly_priority_breakdown[item.month] %}
+                                                <li>
+                                                    <strong>Prioridad {{ priority_item.priority }}:</strong>
+                                                    {{ priority_item.count }} tickets
+                                                    (promedio: {{ format_timedelta(priority_item.avg_duration) }})
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                                <div class="tickets-section">
+                                    <h5>Listado de Issues</h5>
+                                    <!-- Encabezado de columnas -->
+                                    <div class="ticket-list-header">
+                                        <span>Issue</span>
+                                        <span>Prioridad</span>
+                                        <span>Promedio</span>
+                                    </div>
+                                    <ul class="ticket-list">
+                                        {% for t in report.monthly_details[item.month] %}
+                                            <li>
+                                                <strong>Issue #{{ t.id }}</strong>
+                                                <span class="priority-badge">{{ t.priority }}</span>
+                                                <span class="duration">{{ format_timedelta(t.duration) }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+
+            {% if report.priority_details %}
+                {% for item in report.priority_breakdown %}
+                    {% if report.priority_details.get(item.priority) %}
+                        <div id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}" 
+                             class="modal-overlay" aria-hidden="true">
+                            <div class="modal" role="dialog" aria-modal="true">
                                 <div class="modal-header">
-                                    <h4 id="modal-top5-title">Top 5 Issues más Largos</h4>
+                                    <h4>Detalle de Prioridad {{ item.priority }}</h4>
                                     <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
                                 </div>
                                 <div class="modal-body">
                                     <ul class="ticket-list">
-                                        {% for item in report.top_issues %}
-                                            <li><strong>Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
+                                        {% for t in report.priority_details[item.priority] %}
+                                            <li><strong>Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
                                         {% endfor %}
                                     </ul>
                                 </div>
                             </div>
                         </div>
                     {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            {% if report.top_issues %}
+                <div id="modal-top5-{{ report.title|replace(' ', '-') }}" 
+                     class="modal-overlay" aria-hidden="true">
+                    <div class="modal" role="dialog" aria-modal="true">
+                        <div class="modal-header">
+                            <h4>Top 5 Issues más Largos</h4>
+                            <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="modal-body">
+                            <ul class="ticket-list">
+                                {% for item in report.top_issues %}
+                                    <li><strong>Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             {% endif %}
-        </div>
-        {% endfor %}
-    </div>
+
+        {% endif %}
+    {% endfor %}
 
     <script>
         document.addEventListener('click', function (e) {
@@ -161,7 +199,7 @@
                     modal.setAttribute('aria-hidden', 'false');
                 }
             }
-            if (e.target.classList.contains('close-btn')) {
+            if (e.target.classList.contains('close-btn') || e.target.closest('.close-btn')) {
                 var overlay = e.target.closest('.modal-overlay');
                 if (overlay) overlay.setAttribute('aria-hidden', 'true');
             }
