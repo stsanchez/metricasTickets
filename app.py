@@ -622,8 +622,9 @@ def dashboard():
             monthly_breakdown = []
             sorted_months = sorted(results.items(), key=lambda item: (int(item[0].split(" ")[1]), meses_es.index(item[0].split(" ")[0])), reverse=True)
             
+            # Procesar todos los meses del año actual primero (orden cronológico inverso)
             for month, count in sorted_months:
-                month_data = {"month": month, "count": count}
+                month_data = {"month": month, "count": count, "is_previous_year": False}
                 durations_this_month = monthly_durations.get(month, [])
                 if durations_this_month:
                     month_data["avg_duration"] = sum(durations_this_month, timedelta()) / len(durations_this_month)
@@ -632,6 +633,37 @@ def dashboard():
                     month_data["avg_duration"] = None
                     month_data["median_duration"] = None
                 monthly_breakdown.append(month_data)
+            
+            # Verificar si estamos en enero y agregar diciembre del año anterior para comparación
+            current_month = datetime.now().month
+            current_year = datetime.now().year
+            
+            # Si estamos en enero, buscar diciembre del año anterior y agregarlo al final
+            if current_month == 1:
+                december_prev_year = f"DICIEMBRE {current_year - 1}"
+                december_data = results.get(december_prev_year, 0)
+                december_durations = monthly_durations.get(december_prev_year, [])
+                
+                # Solo agregar si hay datos de diciembre del año anterior
+                if december_data > 0:
+                    december_month_data = {
+                        "month": december_prev_year, 
+                        "count": december_data,
+                        "is_previous_year": True  # Marca especial para identificar que es del año anterior
+                    }
+                    if december_durations:
+                        december_month_data["avg_duration"] = sum(december_durations, timedelta()) / len(december_durations)
+                        december_month_data["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in december_durations]))
+                    else:
+                        december_month_data["avg_duration"] = None
+                        december_month_data["median_duration"] = None
+                    
+                    # Agregar diciembre del año anterior al final de la lista
+                    monthly_breakdown.append(december_month_data)
+
+            # Calcular el total de tickets
+            total_tickets = sum(item["count"] for item in monthly_breakdown)
+            report["total_tickets"] = total_tickets
 
             report["monthly_breakdown"] = monthly_breakdown
             report["monthly_details"] = monthly_ticket_details
@@ -724,6 +756,10 @@ def export_pdf():
                     month_data["avg_duration"] = None
                     month_data["median_duration"] = None
                 monthly_breakdown.append(month_data)
+
+            # Calcular el total de tickets
+            total_tickets = sum(item["count"] for item in monthly_breakdown)
+            report["total_tickets"] = total_tickets
 
             report["monthly_breakdown"] = monthly_breakdown
             report["monthly_details"] = monthly_ticket_details

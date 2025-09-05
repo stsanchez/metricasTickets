@@ -12,6 +12,15 @@
 </head>
 <body>
 
+    <!-- Toggle de alternancia de tema -->
+    <div class="theme-toggle-container">
+        <span class="theme-toggle-text">Modo Oscuro</span>
+        <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+            <i class="fas fa-moon moon-icon"></i>
+            <i class="fas fa-sun sun-icon"></i>
+        </button>
+    </div>
+
     <header>
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo Empresa" class="header-logo">
         <div class="header-text">
@@ -33,20 +42,49 @@
                     <h3><i class="fas fa-calendar-alt"></i> Desglose Mensual</h3>
                     <ul>
                         {% for item in report.monthly_breakdown %}
-                            <li>
-                                <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
-                                <span class="monthly-right">
-                                    {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
-                                        <button class="view-details-btn" 
-                                                data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
-                                                title="Ver detalle">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    {% endif %}
-                                </span>
-                            </li>
+                            {% if item.is_previous_year %}
+                                <li class="month-previous-year">
+                                    <div>
+                                        <div class="month-label">📅 Mes anterior para comparación</div>
+                                        <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
+                                    </div>
+                                    <span class="monthly-right">
+                                        {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
+                                            <button class="view-details-btn" 
+                                                    data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
+                                                    title="Ver detalle">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        {% endif %}
+                                    </span>
+                                </li>
+                            {% else %}
+                                <li>
+                                    <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
+                                    <span class="monthly-right">
+                                        {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
+                                            <button class="view-details-btn" 
+                                                    data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
+                                                    title="Ver detalle">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        {% endif %}
+                                    </span>
+                                </li>
+                            {% endif %}
                         {% endfor %}
                     </ul>
+                    
+                    <!-- Total de tickets -->
+                    <div class="total-tickets">
+                        <strong>TOTAL: {{ report.total_tickets }} issues</strong>
+                    </div>
+                    
+                    {% if report.monthly_breakdown and report.monthly_breakdown[-1].is_previous_year %}
+                        <p style="font-size: 0.9em; color: var(--text-muted); margin-top: 12px; font-style: italic;">
+                            💡 <strong>Nota:</strong> Se incluye diciembre del año anterior para facilitar la comparación con enero actual.
+                        </p>
+                    {% endif %}
                 </div>
 
                 <div class="stats-section">
@@ -211,6 +249,44 @@
                 });
             }
         });
+
+        // === Funcionalidad de cambio de tema ===
+        const themeToggle = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Función para cambiar el tema
+        function toggleTheme() {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Cambiar solo el título del botón
+            if (newTheme === 'dark') {
+                themeToggle.title = 'Cambiar a modo claro';
+            } else {
+                themeToggle.title = 'Cambiar a modo oscuro';
+            }
+        }
+
+        // Función para cargar el tema guardado
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            body.setAttribute('data-theme', savedTheme);
+            
+            if (savedTheme === 'dark') {
+                themeToggle.title = 'Cambiar a modo claro';
+            } else {
+                themeToggle.title = 'Cambiar a modo oscuro';
+            }
+        }
+
+        // Event listener para el botón de tema
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // Cargar el tema al iniciar la página
+        loadTheme();
     </script>
 </body>
 </html>
