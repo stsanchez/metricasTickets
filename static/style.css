@@ -533,3 +533,108 @@ header {
         font-size: 12px;
     }
 }
+
+/* === Estilos para el modal de detalles del issue === */
+.issue-link {
+    transition: color 0.2s ease;
+}
+
+.issue-link:hover {
+    color: var(--accent-hover) !important;
+}
+
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner i {
+    font-size: 2rem;
+    margin-bottom: 15px;
+    color: var(--accent-primary);
+}
+
+.loading-spinner p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--danger);
+    text-align: center;
+}
+
+.error-message i {
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+.error-message p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.issue-details {
+    padding: 20px 0;
+}
+
+.issue-detail-item {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.issue-detail-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.issue-detail-item strong {
+    color: var(--text-accent);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.issue-detail-item span {
+    color: var(--text-primary);
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+.issue-description {
+    color: var(--text-primary);
+    font-size: 1rem;
+    line-height: 1.6;
+    word-break: break-word;
+    white-space: pre-wrap;
+    background: var(--bg-tertiary);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-primary);
+    margin-top: 8px;
+}
+
+/* Responsivo para el modal de detalles */
+@media (max-width: 560px) {
+    .issue-detail-item {
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+    }
+    
+    .issue-description {
+        padding: 12px;
+        font-size: 0.9rem;
+    }
+}

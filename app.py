@@ -722,6 +722,70 @@ def dashboard():
     # Pasamos la función format_timedelta al template para poder usarla
     return render_template('index.html', reports=reports_data, format_timedelta=format_timedelta, START_DATE=START_DATE)
 
+@app.route('/issue-details/<int:issue_id>')
+def get_issue_details(issue_id):
+    """Obtiene los detalles de un issue específico"""
+    try:
+        # URL para obtener detalles del work item
+        work_item_url = f"{ORG_URL}/{PROJECT_NAME}/_apis/wit/workitems/{issue_id}?api-version=7.1-preview.3"
+        
+        # Autenticación
+        authorization = str(base64.b64encode(bytes(':' + PAT, 'ascii')), 'ascii')
+        headers = {'Authorization': 'Basic ' + authorization}
+        
+        print(f"🔍 Obteniendo detalles del Issue #{issue_id}...")
+        response = requests.get(url=work_item_url, headers=headers)
+        response.raise_for_status()
+        
+        work_item = response.json()
+        fields = work_item.get('fields', {})
+        
+        # Extraer información relevante
+        issue_details = {
+            'id': issue_id,
+            'title': fields.get('System.Title', 'Sin título'),
+            'description': fields.get('System.Description', 'Sin descripción'),
+            'created_date': fields.get('System.CreatedDate', ''),
+            'state_change_date': fields.get('Microsoft.VSTS.Common.StateChangeDate', ''),
+            'priority': fields.get('Microsoft.VSTS.Common.Priority', 'N/A'),
+            'assigned_to': fields.get('System.AssignedTo', {}).get('displayName', 'Sin asignar') if isinstance(fields.get('System.AssignedTo'), dict) else 'Sin asignar',
+            'state': fields.get('System.State', 'Desconocido')
+        }
+        
+        # Formatear fechas
+        if issue_details['created_date']:
+            try:
+                created_dt = datetime.fromisoformat(issue_details['created_date'].replace('Z', '+00:00'))
+                issue_details['created_date_formatted'] = created_dt.strftime('%d/%m/%Y %H:%M')
+            except:
+                issue_details['created_date_formatted'] = issue_details['created_date']
+        else:
+            issue_details['created_date_formatted'] = 'N/A'
+            
+        if issue_details['state_change_date']:
+            try:
+                state_change_dt = datetime.fromisoformat(issue_details['state_change_date'].replace('Z', '+00:00'))
+                issue_details['state_change_date_formatted'] = state_change_dt.strftime('%d/%m/%Y %H:%M')
+            except:
+                issue_details['state_change_date_formatted'] = issue_details['state_change_date']
+        else:
+            issue_details['state_change_date_formatted'] = 'N/A'
+        
+        return issue_details
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo detalles del Issue #{issue_id}: {e}")
+        return {
+            'id': issue_id,
+            'title': 'Error al cargar',
+            'description': f'No se pudieron cargar los detalles del issue: {str(e)}',
+            'created_date_formatted': 'N/A',
+            'state_change_date_formatted': 'N/A',
+            'priority': 'N/A',
+            'assigned_to': 'N/A',
+            'state': 'N/A'
+        }
+
 @app.route('/export-pdf')
 def export_pdf():
     """Exporta los reportes como PDF"""

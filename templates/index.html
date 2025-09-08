@@ -169,7 +169,7 @@
                                     <ul class="ticket-list">
                                         {% for t in report.monthly_details[item.month] %}
                                             <li>
-                                                <strong>Issue #{{ t.id }}</strong>
+                                                <strong class="issue-link" data-issue-id="{{ t.id }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}</strong>
                                                 <span class="priority-badge">{{ t.priority }}</span>
                                                 <span class="duration">{{ format_timedelta(t.duration) }}</span>
                                             </li>
@@ -195,7 +195,7 @@
                                 <div class="modal-body">
                                     <ul class="ticket-list">
                                         {% for t in report.priority_details[item.priority] %}
-                                            <li><strong>Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
+                                            <li><strong class="issue-link" data-issue-id="{{ t.id }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
                                         {% endfor %}
                                     </ul>
                                 </div>
@@ -216,7 +216,7 @@
                         <div class="modal-body">
                             <ul class="ticket-list">
                                 {% for item in report.top_issues %}
-                                    <li><strong>Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
+                                    <li><strong class="issue-link" data-issue-id="{{ item.id }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -226,6 +226,24 @@
 
         {% endif %}
     {% endfor %}
+
+    <!-- Modal para detalles del issue -->
+    <div id="issue-details-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h4>Detalles del Issue</h4>
+                <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="issue-details-content">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Cargando detalles del issue...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('click', function (e) {
@@ -237,11 +255,97 @@
                     modal.setAttribute('aria-hidden', 'false');
                 }
             }
+            
+            // Manejar clic en números de issue
+            var issueLink = e.target.closest('.issue-link');
+            if (issueLink) {
+                var issueId = issueLink.getAttribute('data-issue-id');
+                if (issueId) {
+                    showIssueDetails(issueId);
+                }
+            }
+            
             if (e.target.classList.contains('close-btn') || e.target.closest('.close-btn')) {
                 var overlay = e.target.closest('.modal-overlay');
                 if (overlay) overlay.setAttribute('aria-hidden', 'true');
             }
         });
+        
+        // Función para mostrar detalles del issue
+        function showIssueDetails(issueId) {
+            var modal = document.getElementById('issue-details-modal');
+            var content = document.getElementById('issue-details-content');
+            
+            // Mostrar modal con spinner de carga
+            content.innerHTML = `
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando detalles del issue...</p>
+                </div>
+            `;
+            modal.setAttribute('aria-hidden', 'false');
+            
+            // Hacer petición al servidor
+            fetch(`/issue-details/${issueId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Formatear la descripción (remover HTML si existe)
+                    var description = data.description || 'Sin descripción';
+                    if (description.includes('<')) {
+                        // Crear un elemento temporal para extraer solo el texto
+                        var temp = document.createElement('div');
+                        temp.innerHTML = description;
+                        description = temp.textContent || temp.innerText || 'Sin descripción';
+                    }
+                    
+                    // Mostrar los detalles
+                    content.innerHTML = `
+                        <div class="issue-details">
+                            <div class="issue-detail-item">
+                                <strong>Número de Issue:</strong>
+                                <span>#${data.id}</span>
+                            </div>
+                            <div class="issue-detail-item">
+                                <strong>Título:</strong>
+                                <span>${data.title}</span>
+                            </div>
+                            <div class="issue-detail-item">
+                                <strong>Descripción:</strong>
+                                <div class="issue-description">${description}</div>
+                            </div>
+                            <div class="issue-detail-item">
+                                <strong>Fecha de Creación:</strong>
+                                <span>${data.created_date_formatted}</span>
+                            </div>
+                            <div class="issue-detail-item">
+                                <strong>Fecha de Finalización:</strong>
+                                <span>${data.state_change_date_formatted}</span>
+                            </div>
+                            <div class="issue-detail-item">
+                                <strong>Prioridad:</strong>
+                                <span class="priority-badge">${data.priority}</span>
+                            </div>
+                            <div class="issue-detail-item">
+                                <strong>Estado:</strong>
+                                <span>${data.state}</span>
+                            </div>
+                            <div class="issue-detail-item">
+                                <strong>Asignado a:</strong>
+                                <span>${data.assigned_to}</span>
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error al cargar detalles del issue:', error);
+                    content.innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Error al cargar los detalles del issue. Por favor, inténtalo de nuevo.</p>
+                        </div>
+                    `;
+                });
+        }
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.modal-overlay[aria-hidden="false"]').forEach(function (m) {
