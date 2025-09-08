@@ -151,8 +151,8 @@ def generate_pdf_report(reports_data):
     title_style = ParagraphStyle(
         'MainTitle',
         parent=styles['Heading1'],
-        fontSize=20,
-        spaceAfter=20,
+        fontSize=18,
+        spaceAfter=12,
         alignment=TA_CENTER,
         textColor=colors.HexColor('#012f60'),
         fontName='Helvetica-Bold'
@@ -162,8 +162,8 @@ def generate_pdf_report(reports_data):
     subtitle_style = ParagraphStyle(
         'Subtitle',
         parent=styles['Normal'],
-        fontSize=10,
-        spaceAfter=10,
+        fontSize=9,
+        spaceAfter=8,
         alignment=TA_CENTER,
         textColor=colors.HexColor('#012f60'),
         fontName='Helvetica'
@@ -173,14 +173,14 @@ def generate_pdf_report(reports_data):
     section_style = ParagraphStyle(
         'SectionTitle',
         parent=styles['Heading2'],
-        fontSize=13,
-        spaceAfter=8,
-        spaceBefore=12,
+        fontSize=12,
+        spaceAfter=6,
+        spaceBefore=8,
         textColor=colors.HexColor('#012f60'),
         fontName='Helvetica-Bold',
         borderWidth=0,
         borderColor=colors.HexColor('#012f60'),
-        borderPadding=5
+        borderPadding=3
     )
     
     # Estilo para texto normal
@@ -201,18 +201,18 @@ def generate_pdf_report(reports_data):
     try:
         logo_path = os.path.join(os.path.dirname(__file__), 'static', 'Logo.png')
         if os.path.exists(logo_path):
-            logo = Image(logo_path, width=1*inch, height=0.5*inch)
+            logo = Image(logo_path, width=0.8*inch, height=0.4*inch)
             logo.hAlign = 'CENTER'
             story.append(logo)
-            story.append(Spacer(1, 15))
+            story.append(Spacer(1, 10))
     except Exception as e:
         print(f"No se pudo cargar el logo: {e}")
     
     # Título principal más grande
     story.append(Paragraph("DASHBOARD DE MÉTRICAS DE SOPORTE IT", title_style))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
     story.append(Paragraph(f"Reportes generados para 'Issues' creados desde el {START_DATE}", subtitle_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 6))
     
     # Procesar solo el primer reporte (Geleser Pimentel)
     if len(reports_data) > 0:
@@ -254,22 +254,22 @@ def generate_pdf_report(reports_data):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('TOPPADDING', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
                 # Filas de datos
                 ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
                 ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-                ('TOPPADDING', (0, 1), (-1, -1), 6),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
                 # Bordes
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
             ]))
             story.append(monthly_table)
-            story.append(Spacer(1, 10))
+            story.append(Spacer(1, 6))
             
             # Métricas generales con diseño mejorado
             story.append(Paragraph("MÉTRICAS GENERALES", section_style))
@@ -294,50 +294,20 @@ def generate_pdf_report(reports_data):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('TOPPADDING', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
                 # Filas de datos
                 ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
                 ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-                ('TOPPADDING', (0, 1), (-1, -1), 6),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
                 # Bordes
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60'))
             ]))
             story.append(general_metrics_table)
-            story.append(Spacer(1, 10))
-            
-            # Top 3 Issues más largos
-            story.append(Paragraph("TOP 3 ISSUES MÁS LARGOS", section_style))
-            top_issues_data = [["ISSUE ID", "DURACIÓN"]]
-            for item in report["top_issues"][:3]:
-                top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
-            
-            top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
-            top_issues_table.setStyle(TableStyle([
-                # Encabezado
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('TOPPADDING', (0, 0), (-1, 0), 10),
-                # Filas de datos
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
-                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-                ('TOPPADDING', (0, 1), (-1, -1), 6),
-                # Bordes
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
-            ]))
-            story.append(top_issues_table)
         else:
             story.append(Paragraph("No se encontraron 'Issues' que cumplan los criterios.", normal_style))
     
@@ -380,20 +350,20 @@ def generate_pdf_report(reports_data):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
                 ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
             ]))
             story.append(monthly_table)
-            story.append(Spacer(1, 25))
+            story.append(Spacer(1, 6))
             
             # Métricas generales
             story.append(Paragraph("MÉTRICAS GENERALES", section_style))
@@ -416,45 +386,18 @@ def generate_pdf_report(reports_data):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
                 ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60'))
             ]))
             story.append(general_metrics_table)
-            story.append(Spacer(1, 25))
-            
-            # Top 3 Issues más largos
-            story.append(Paragraph("TOP 3 ISSUES MÁS LARGOS", section_style))
-            top_issues_data = [["ISSUE ID", "DURACIÓN"]]
-            for item in report["top_issues"][:3]:
-                top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
-            
-            top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
-            top_issues_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('TOPPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
-                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
-            ]))
-            story.append(top_issues_table)
         else:
             story.append(Paragraph("No se encontraron 'Issues' que cumplan los criterios.", normal_style))
     
@@ -497,20 +440,20 @@ def generate_pdf_report(reports_data):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
                 ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
             ]))
             story.append(monthly_table)
-            story.append(Spacer(1, 25))
+            story.append(Spacer(1, 6))
             
             # Métricas generales
             story.append(Paragraph("MÉTRICAS GENERALES", section_style))
@@ -533,45 +476,18 @@ def generate_pdf_report(reports_data):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, 0), 6),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
                 ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+                ('TOPPADDING', (0, 1), (-1, -1), 4),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60'))
             ]))
             story.append(general_metrics_table)
-            story.append(Spacer(1, 25))
-            
-            # Top 3 Issues más largos
-            story.append(Paragraph("TOP 3 ISSUES MÁS LARGOS", section_style))
-            top_issues_data = [["ISSUE ID", "DURACIÓN"]]
-            for item in report["top_issues"][:3]:
-                top_issues_data.append([f"Issue #{item['id']}", format_timedelta(item['duration'])])
-            
-            top_issues_table = Table(top_issues_data, colWidths=[2.5*inch, 2.5*inch])
-            top_issues_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#012f60')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('TOPPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
-                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#012f60')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#f8f9fa'), colors.white])
-            ]))
-            story.append(top_issues_table)
         else:
             story.append(Paragraph("No se encontraron 'Issues' que cumplan los criterios.", normal_style))
     
@@ -752,6 +668,43 @@ def get_issue_details(issue_id):
             'state': fields.get('System.State', 'Desconocido')
         }
         
+        # Obtener comentarios/discusión del issue
+        try:
+            comments_url = f"{ORG_URL}/{PROJECT_NAME}/_apis/wit/workItems/{issue_id}/comments?api-version=7.1-preview.3"
+            comments_response = requests.get(url=comments_url, headers=headers)
+            comments_response.raise_for_status()
+            comments_data = comments_response.json()
+            
+            # Procesar comentarios
+            comments = []
+            if comments_data.get('comments'):
+                for comment in comments_data['comments']:
+                    comment_info = {
+                        'id': comment.get('id'),
+                        'text': comment.get('text', ''),
+                        'created_date': comment.get('createdDate', ''),
+                        'created_by': comment.get('createdBy', {}).get('displayName', 'Usuario desconocido') if isinstance(comment.get('createdBy'), dict) else 'Usuario desconocido'
+                    }
+                    
+                    # Formatear fecha del comentario
+                    if comment_info['created_date']:
+                        try:
+                            comment_dt = datetime.fromisoformat(comment_info['created_date'].replace('Z', '+00:00'))
+                            comment_info['created_date_formatted'] = comment_dt.strftime('%d/%m/%Y %H:%M')
+                        except:
+                            comment_info['created_date_formatted'] = comment_info['created_date']
+                    else:
+                        comment_info['created_date_formatted'] = 'N/A'
+                    
+                    comments.append(comment_info)
+            
+            issue_details['comments'] = comments
+            print(f"✅ Se encontraron {len(comments)} comentarios para el Issue #{issue_id}")
+            
+        except Exception as e:
+            print(f"⚠️ No se pudieron obtener los comentarios del Issue #{issue_id}: {e}")
+            issue_details['comments'] = []
+        
         # Formatear fechas
         if issue_details['created_date']:
             try:
@@ -783,7 +736,8 @@ def get_issue_details(issue_id):
             'state_change_date_formatted': 'N/A',
             'priority': 'N/A',
             'assigned_to': 'N/A',
-            'state': 'N/A'
+            'state': 'N/A',
+            'comments': []
         }
 
 @app.route('/export-pdf')
@@ -895,4 +849,4 @@ def export_pdf():
 
 if __name__ == '__main__':
     #app.run(debug=True)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

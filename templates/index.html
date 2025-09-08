@@ -299,6 +299,38 @@
                     }
                     
                     // Mostrar los detalles
+                    let commentsHtml = '';
+                    if (data.comments && data.comments.length > 0) {
+                        commentsHtml = `
+                            <div class="issue-detail-item">
+                                <strong>Comentarios:</strong>
+                                <div class="comments-section">
+                                    <button class="view-comments-btn" onclick="toggleComments(${data.id})">
+                                        <i class="fas fa-comments"></i> Ver todos los comentarios (${data.comments.length})
+                                    </button>
+                                    <div id="comments-${data.id}" class="comments-list" style="display: none;">
+                                        ${data.comments.map(comment => `
+                                            <div class="comment-item">
+                                                <div class="comment-header">
+                                                    <strong>${comment.created_by}</strong>
+                                                    <span class="comment-date">${comment.created_date_formatted}</span>
+                                                </div>
+                                                <div class="comment-text">${comment.text}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        commentsHtml = `
+                            <div class="issue-detail-item">
+                                <strong>Comentarios:</strong>
+                                <span class="no-comments">No hay comentarios disponibles</span>
+                            </div>
+                        `;
+                    }
+                    
                     content.innerHTML = `
                         <div class="issue-details">
                             <div class="issue-detail-item">
@@ -333,6 +365,7 @@
                                 <strong>Asignado a:</strong>
                                 <span>${data.assigned_to}</span>
                             </div>
+                            ${commentsHtml}
                         </div>
                     `;
                 })
@@ -346,6 +379,21 @@
                     `;
                 });
         }
+        
+        // Función para mostrar/ocultar comentarios
+        function toggleComments(issueId) {
+            const commentsDiv = document.getElementById(`comments-${issueId}`);
+            const button = document.querySelector(`button[onclick="toggleComments(${issueId})"]`);
+            
+            if (commentsDiv.style.display === 'none') {
+                commentsDiv.style.display = 'block';
+                button.innerHTML = '<i class="fas fa-comments"></i> Ocultar comentarios';
+            } else {
+                commentsDiv.style.display = 'none';
+                button.innerHTML = '<i class="fas fa-comments"></i> Ver todos los comentarios';
+            }
+        }
+        
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.modal-overlay[aria-hidden="false"]').forEach(function (m) {
