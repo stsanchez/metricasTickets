@@ -100,7 +100,7 @@ def get_done_tickets_by_month(user_list):
         return {}, [], {}, {}, {}, {}, {}, {}, {}
 
 def format_timedelta(td):
-    if not isinstance(td, timedelta) or td.total_seconds() <= 0: return "N/A"
+    if not isinstance(td, timedelta) or td.total_seconds() <= 0: return "0"
     days = td.days
     hours, remainder = divmod(td.seconds, 3600)
     minutes, _ = divmod(remainder, 60)
