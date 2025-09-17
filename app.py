@@ -58,7 +58,7 @@ def get_done_tickets_by_month(user_list):
         if not work_items: return {}, [], {}, {}, {}, {}, {}, {}, {}
         ticket_ids = [item['id'] for item in work_items]
         print(f"✅ Se encontraron {len(ticket_ids)} 'Issues' que cumplen los criterios.")
-        fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.StateChangeDate", "Microsoft.VSTS.Common.Priority"]
+        fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.StateChangeDate", "Microsoft.VSTS.Common.Priority", "System.Title"]
         batch_url = f"{ORG_URL}/_apis/wit/workitemsbatch?api-version={API_VERSION_BATCH}"
         all_detailed_tickets, chunk_size = [], 200
         for i in range(0, len(ticket_ids), chunk_size):
@@ -80,15 +80,17 @@ def get_done_tickets_by_month(user_list):
             duration = business_time_between(creation_date, completion_date)
             # Prioridad (1..4)
             priority_value = ticket['fields'].get('Microsoft.VSTS.Common.Priority')
+            # Título del issue
+            title = ticket['fields'].get('System.Title', 'Sin título')
             if isinstance(priority_value, int) and 1 <= priority_value <= 4:
                 priority_counts[priority_value] += 1
                 priority_durations[priority_value].append(duration)
-                priority_ticket_details[priority_value].append({'id': ticket['id'], 'duration': duration, 'priority': priority_value})
+                priority_ticket_details[priority_value].append({'id': ticket['id'], 'duration': duration, 'priority': priority_value, 'title': title})
             month_key = f"{meses_es[completion_date.month - 1]} {completion_date.year}"
-            ticket_details.append({'id': ticket['id'], 'duration': duration, 'priority': priority_value})
+            ticket_details.append({'id': ticket['id'], 'duration': duration, 'priority': priority_value, 'title': title})
             monthly_counts[month_key] += 1
             monthly_durations[month_key].append(duration)
-            monthly_ticket_details[month_key].append({'id': ticket['id'], 'duration': duration, 'priority': priority_value})
+            monthly_ticket_details[month_key].append({'id': ticket['id'], 'duration': duration, 'priority': priority_value, 'title': title})
             
             # Datos de prioridad por mes
             if isinstance(priority_value, int) and 1 <= priority_value <= 4:

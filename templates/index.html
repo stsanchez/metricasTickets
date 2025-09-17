@@ -169,7 +169,7 @@
                                     <ul class="ticket-list">
                                         {% for t in report.monthly_details[item.month] %}
                                             <li>
-                                                <strong class="issue-link" data-issue-id="{{ t.id }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}</strong>
+                                                <strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}</strong>
                                                 <span class="priority-badge">{{ t.priority }}</span>
                                                 <span class="duration">{{ format_timedelta(t.duration) }}</span>
                                             </li>
@@ -195,7 +195,7 @@
                                 <div class="modal-body">
                                     <ul class="ticket-list">
                                         {% for t in report.priority_details[item.priority] %}
-                                            <li><strong class="issue-link" data-issue-id="{{ t.id }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
+                                            <li><strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
                                         {% endfor %}
                                     </ul>
                                 </div>
@@ -216,7 +216,7 @@
                         <div class="modal-body">
                             <ul class="ticket-list">
                                 {% for item in report.top_issues %}
-                                    <li><strong class="issue-link" data-issue-id="{{ item.id }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
+                                    <li><strong class="issue-link" data-issue-id="{{ item.id }}" data-issue-title="{{ item.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -393,6 +393,117 @@
                 button.innerHTML = '<i class="fas fa-comments"></i> Ver todos los comentarios';
             }
         }
+        
+        // === Funcionalidad de tooltip para issues ===
+        let tooltipTimeout = null;
+        let currentTooltip = null;
+        
+        // Función para crear y mostrar tooltip
+        function showTooltip(element, title, mouseX, mouseY) {
+            // Limpiar tooltip anterior si existe
+            hideTooltip();
+            
+            // Crear elemento tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'issue-tooltip';
+            tooltip.textContent = title;
+            
+            // Agregar tooltip al body para posicionamiento absoluto
+            document.body.appendChild(tooltip);
+            currentTooltip = tooltip;
+            
+            // Posicionar tooltip desde la posición del mouse hacia la derecha
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // Posición inicial (aproximada)
+            let left = mouseX + 10; // 10px de separación del cursor
+            let top = mouseY - 40 - 10; // 40px altura aproximada + 10px arriba del cursor
+            
+            // Aplicar posición inicial
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.style.position = 'fixed';
+            
+            // Mostrar tooltip con animación
+            setTimeout(() => {
+                if (tooltip && tooltip.parentNode) {
+                    // Obtener dimensiones reales después de que se muestre
+                    const tooltipRect = tooltip.getBoundingClientRect();
+                    const tooltipWidth = tooltipRect.width;
+                    const tooltipHeight = tooltipRect.height;
+                    
+                    // Recalcular posición si es necesario
+                    let newLeft = mouseX + 10;
+                    let newTop = mouseY - tooltipHeight - 10;
+                    
+                    // Ajustar si se sale por la derecha
+                    if (newLeft + tooltipWidth > viewportWidth) {
+                        newLeft = mouseX - tooltipWidth - 10;
+                    }
+                    
+                    // Ajustar si se sale por arriba
+                    if (newTop < 10) {
+                        newTop = mouseY + 10;
+                    }
+                    
+                    // Aplicar posición corregida
+                    tooltip.style.left = newLeft + 'px';
+                    tooltip.style.top = newTop + 'px';
+                    
+                    tooltip.classList.add('show');
+                }
+            }, 10);
+        }
+        
+        // Función para ocultar tooltip
+        function hideTooltip() {
+            if (currentTooltip && currentTooltip.parentNode) {
+                currentTooltip.classList.remove('show');
+                setTimeout(() => {
+                    if (currentTooltip && currentTooltip.parentNode) {
+                        currentTooltip.parentNode.removeChild(currentTooltip);
+                    }
+                }, 200);
+                currentTooltip = null;
+            }
+        }
+        
+        // Event listeners para tooltip
+        document.addEventListener('mouseenter', function(e) {
+            const issueLink = e.target.closest('.issue-link');
+            if (issueLink && issueLink.getAttribute('data-issue-title')) {
+                const title = issueLink.getAttribute('data-issue-title');
+                
+                // Limpiar timeout anterior si existe
+                if (tooltipTimeout) {
+                    clearTimeout(tooltipTimeout);
+                }
+                
+                // Mostrar tooltip después de 1.5 segundos
+                tooltipTimeout = setTimeout(() => {
+                    showTooltip(issueLink, title, e.clientX, e.clientY);
+                }, 1500);
+            }
+        }, true);
+        
+        document.addEventListener('mouseleave', function(e) {
+            const issueLink = e.target.closest('.issue-link');
+            if (issueLink) {
+                // Limpiar timeout si el mouse sale antes de que aparezca el tooltip
+                if (tooltipTimeout) {
+                    clearTimeout(tooltipTimeout);
+                    tooltipTimeout = null;
+                }
+                
+                // Ocultar tooltip si está visible
+                hideTooltip();
+            }
+        }, true);
+        
+        // Ocultar tooltip al hacer scroll o cambiar de ventana
+        window.addEventListener('scroll', hideTooltip);
+        window.addEventListener('resize', hideTooltip);
         
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {

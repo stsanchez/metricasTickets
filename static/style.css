@@ -537,11 +537,43 @@ header {
 /* === Estilos para el modal de detalles del issue === */
 .issue-link {
     transition: color 0.2s ease;
+    position: relative;
+    cursor: pointer;
 }
 
 .issue-link:hover {
     color: var(--accent-hover) !important;
 }
+
+/* === Estilos para el tooltip === */
+.issue-tooltip {
+    position: fixed;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px var(--shadow-secondary);
+    border: 1px solid var(--border-primary);
+    z-index: 10000;
+    width: auto;
+    max-width: 80vw;
+    white-space: nowrap;
+    overflow: visible;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-5px);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.issue-tooltip.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
 
 .loading-spinner {
     display: flex;
