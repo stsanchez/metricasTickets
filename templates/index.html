@@ -162,13 +162,28 @@
                                     <h5>Listado de Issues</h5>
                                     <!-- Encabezado de columnas -->
                                     <div class="ticket-list-header">
-                                        <span>Issue</span>
-                                        <span>Prioridad</span>
-                                        <span>Promedio</span>
+                                        <span class="sortable-header">
+                                            Issue
+                                            <button class="sort-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" data-sort-type="issue" title="Ordenar por Issue ID">
+                                                <i class="fas fa-sort sort-icon"></i>
+                                            </button>
+                                        </span>
+                                        <span class="sortable-header">
+                                            Prioridad
+                                            <button class="sort-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" data-sort-type="priority" title="Ordenar por prioridad">
+                                                <i class="fas fa-sort sort-icon"></i>
+                                            </button>
+                                        </span>
+                                        <span class="sortable-header">
+                                            Promedio
+                                            <button class="sort-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" data-sort-type="duration" title="Ordenar por promedio">
+                                                <i class="fas fa-sort sort-icon"></i>
+                                            </button>
+                                        </span>
                                     </div>
-                                    <ul class="ticket-list">
+                                    <ul class="ticket-list" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}">
                                         {% for t in report.monthly_details[item.month] %}
-                                            <li>
+                                            <li data-duration="{{ t.duration.total_seconds() }}" data-issue-id="{{ t.id }}" data-priority="{{ t.priority }}">
                                                 <strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}</strong>
                                                 <span class="priority-badge">{{ t.priority }}</span>
                                                 <span class="duration">{{ format_timedelta(t.duration) }}</span>
@@ -550,6 +565,175 @@
 
         // Cargar el tema al iniciar la página
         loadTheme();
+
+        // === Funcionalidad de ordenamiento ===
+        let sortStates = {}; // Almacenar el estado de ordenamiento para cada modal
+
+        // Función para ordenar la lista de issues
+        function sortIssues(modalId, sortDirection, sortType) {
+            console.log('sortIssues llamada con modalId:', modalId, 'sortDirection:', sortDirection, 'sortType:', sortType);
+            const ticketList = document.querySelector(`.ticket-list[data-modal-id="${modalId}"]`);
+            console.log('ticketList encontrado:', ticketList);
+            if (!ticketList) {
+                console.log('No se encontró ticketList para modalId:', modalId);
+                return;
+            }
+
+            const items = Array.from(ticketList.querySelectorAll('li'));
+            console.log('Items encontrados:', items.length);
+            
+            // Guardar el orden original si no está guardado
+            if (!sortStates[modalId] || !sortStates[modalId].originalOrder) {
+                sortStates[modalId] = {
+                    originalOrder: items.map(item => item.outerHTML)
+                };
+            }
+
+            if (sortDirection === 'none') {
+                // Restaurar orden original
+                ticketList.innerHTML = sortStates[modalId].originalOrder.join('');
+                sortStates[modalId].currentSort = 'none';
+                sortStates[modalId].currentSortType = null;
+            } else {
+                // Ordenar según el tipo especificado
+                items.sort((a, b) => {
+                    let valueA, valueB;
+                    
+                    switch (sortType) {
+                        case 'issue':
+                            valueA = parseInt(a.getAttribute('data-issue-id'));
+                            valueB = parseInt(b.getAttribute('data-issue-id'));
+                            break;
+                        case 'priority':
+                            valueA = parseInt(a.getAttribute('data-priority')) || 999; // 999 para valores nulos
+                            valueB = parseInt(b.getAttribute('data-priority')) || 999;
+                            break;
+                        case 'duration':
+                        default:
+                            valueA = parseFloat(a.getAttribute('data-duration'));
+                            valueB = parseFloat(b.getAttribute('data-duration'));
+                            break;
+                    }
+                    
+                    if (sortDirection === 'asc') {
+                        return valueA - valueB;
+                    } else {
+                        return valueB - valueA;
+                    }
+                });
+
+                // Limpiar la lista y agregar elementos ordenados
+                ticketList.innerHTML = '';
+                items.forEach(item => ticketList.appendChild(item));
+                sortStates[modalId].currentSort = sortDirection;
+                sortStates[modalId].currentSortType = sortType;
+            }
+
+            // Actualizar el ícono del botón
+            updateSortButton(modalId, sortDirection, sortType);
+        }
+
+        // Función para actualizar el ícono del botón de ordenamiento
+        function updateSortButton(modalId, sortDirection, sortType) {
+            // Actualizar todos los botones de ordenamiento en este modal
+            const allSortBtns = document.querySelectorAll(`.sort-btn[data-modal-id="${modalId}"]`);
+            
+            allSortBtns.forEach(sortBtn => {
+                const icon = sortBtn.querySelector('.sort-icon');
+                if (!icon) return;
+
+                const btnSortType = sortBtn.getAttribute('data-sort-type');
+                
+                // Remover clases anteriores
+                icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+                
+                // Solo actualizar el botón que corresponde al tipo de ordenamiento actual
+                if (btnSortType === sortType) {
+                    // Agregar clase correspondiente
+                    switch (sortDirection) {
+                        case 'asc':
+                            icon.classList.add('fa-sort-up');
+                            sortBtn.title = 'Ordenar descendente';
+                            break;
+                        case 'desc':
+                            icon.classList.add('fa-sort-down');
+                            sortBtn.title = 'Sin ordenar';
+                            break;
+                        case 'none':
+                        default:
+                            icon.classList.add('fa-sort');
+                            sortBtn.title = 'Ordenar ascendente';
+                            break;
+                    }
+                } else {
+                    // Resetear otros botones
+                    icon.classList.add('fa-sort');
+                    switch (btnSortType) {
+                        case 'issue':
+                            sortBtn.title = 'Ordenar por Issue ID';
+                            break;
+                        case 'priority':
+                            sortBtn.title = 'Ordenar por prioridad';
+                            break;
+                        case 'duration':
+                            sortBtn.title = 'Ordenar por promedio';
+                            break;
+                    }
+                }
+            });
+        }
+
+        // Event listener para el botón de ordenamiento
+        document.addEventListener('click', function(e) {
+            const sortBtn = e.target.closest('.sort-btn');
+            if (sortBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const modalId = sortBtn.getAttribute('data-modal-id');
+                const sortType = sortBtn.getAttribute('data-sort-type');
+                console.log('Botón de ordenamiento clickeado, modalId:', modalId, 'sortType:', sortType);
+                
+                if (!modalId || !sortType) {
+                    console.log('No se encontró modalId o sortType');
+                    return;
+                }
+
+                // Obtener el estado actual de ordenamiento
+                const currentSort = sortStates[modalId]?.currentSort || 'none';
+                const currentSortType = sortStates[modalId]?.currentSortType;
+                console.log('Estado actual de ordenamiento:', currentSort, 'tipo:', currentSortType);
+                
+                // Determinar el siguiente estado
+                let nextSort;
+                
+                // Si es un tipo diferente al actual, empezar con ascendente
+                if (currentSortType !== sortType) {
+                    nextSort = 'asc';
+                } else {
+                    // Si es el mismo tipo, ciclar entre los estados
+                    switch (currentSort) {
+                        case 'none':
+                            nextSort = 'asc';
+                            break;
+                        case 'asc':
+                            nextSort = 'desc';
+                            break;
+                        case 'desc':
+                            nextSort = 'none';
+                            break;
+                        default:
+                            nextSort = 'asc';
+                            break;
+                    }
+                }
+
+                console.log('Próximo estado de ordenamiento:', nextSort, 'tipo:', sortType);
+                
+                // Aplicar el nuevo ordenamiento
+                sortIssues(modalId, nextSort, sortType);
+            }
+        });
     </script>
 </body>
 </html>

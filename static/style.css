@@ -453,6 +453,75 @@ header {
 }
 /* === ✨ FIN DE LA SECCIÓN MODIFICADA ✨ === */
 
+/* === Estilos para el botón de ordenamiento === */
+.sortable-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Alineación específica para cada columna */
+.ticket-list-header span:nth-child(1).sortable-header {
+    justify-content: flex-start; /* Issue alineado a la izquierda */
+}
+
+.ticket-list-header span:nth-child(2).sortable-header {
+    justify-content: center; /* Prioridad centrado */
+}
+
+.ticket-list-header span:nth-child(3).sortable-header {
+    justify-content: flex-end; /* Promedio alineado a la derecha */
+}
+
+.sort-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.sort-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent-primary);
+    transform: scale(1.1);
+}
+
+.sort-btn:active {
+    transform: scale(0.95);
+}
+
+.sort-icon {
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.sort-btn:hover .sort-icon {
+    color: var(--accent-primary);
+}
+
+/* Estados del ícono de ordenamiento */
+.sort-icon.fa-sort {
+    opacity: 0.6;
+}
+
+.sort-icon.fa-sort-up {
+    color: var(--accent-primary);
+    opacity: 1;
+}
+
+.sort-icon.fa-sort-down {
+    color: var(--accent-primary);
+    opacity: 1;
+}
+
 /* === Listado de Issues === */
 .ticket-list {
     list-style: none;
