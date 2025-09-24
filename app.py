@@ -638,7 +638,13 @@ def dashboard():
         reports_data.append(report)
 
     # Pasamos la función format_timedelta al template para poder usarla
-    return render_template('index.html', reports=reports_data, format_timedelta=format_timedelta, START_DATE=START_DATE)
+    return render_template('index.html', 
+                          reports=reports_data, 
+                          format_timedelta=format_timedelta, 
+                          START_DATE=START_DATE,
+                          get_sla_limit=get_sla_limit,
+                          get_sla_warning_limit=get_sla_warning_limit)
+
 
 @app.route('/issue-details/<int:issue_id>')
 def get_issue_details(issue_id):
@@ -848,6 +854,27 @@ def export_pdf():
         download_name=filename,
         mimetype='application/pdf'
     )
+
+# --- FUNCIONES HELPER PARA SLA ---
+def get_sla_limit(priority):
+    """Calcula el límite de SLA en segundos según la prioridad"""
+    sla_limits = {
+        1: 4 * 3600,      # P1: 4 horas
+        2: 8 * 3600,      # P2: 8 horas  
+        3: 2 * 24 * 3600, # P3: 2 días hábiles (aproximado)
+        4: 5 * 24 * 3600  # P4: 5 días hábiles (aproximado)
+    }
+    return sla_limits.get(priority, 2 * 24 * 3600)  # Default: 2 días
+
+def get_sla_warning_limit(priority):
+    """Calcula el límite de advertencia en segundos según la prioridad"""
+    warning_limits = {
+        1: 2 * 3600,      # P1: 2 horas (50% del límite)
+        2: 4 * 3600,      # P2: 4 horas (50% del límite)
+        3: 1 * 24 * 3600, # P3: 1 día hábil (50% del límite)
+        4: 3 * 24 * 3600  # P4: 3 días hábiles (60% del límite)
+    }
+    return warning_limits.get(priority, 1 * 24 * 3600)  # Default: 1 día
 
 if __name__ == '__main__':
     #app.run(debug=True)

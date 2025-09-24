@@ -9,26 +9,81 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-    <!-- Toggle de alternancia de tema -->
-    <div class="theme-toggle-container">
-        <span class="theme-toggle-text">Modo Oscuro</span>
-        <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
-            <i class="fas fa-moon moon-icon"></i>
-            <i class="fas fa-sun sun-icon"></i>
-        </button>
-    </div>
 
     <header>
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo Empresa" class="header-logo">
         <div class="header-text">
             <h1>Dashboard de Métricas de Soporte</h1>
             <p>Reportes generados para 'Issues' creados desde el {{ START_DATE }}</p>
-            <a href="{{ url_for('export_pdf') }}" class="download-btn"><i class="fas fa-file-pdf"></i> Descargar Reporte PDF</a>
+            <div class="download-buttons">
+                <a href="{{ url_for('export_pdf') }}" class="download-btn pdf"><i class="fas fa-file-pdf"></i> PDF</a>
+                <button id="export-excel" class="download-btn excel"><i class="fas fa-file-excel"></i> Excel</button>
+            </div>
         </div>
     </header>
+
+    <!-- Botón de Modo Oscuro -->
+    <div class="dark-mode-toggle">
+        <button class="theme-toggle" id="theme-toggle" title="Cambiar a modo oscuro">
+            <i class="fas fa-moon moon-icon"></i>
+            <i class="fas fa-sun sun-icon"></i>
+        </button>
+    </div>
+
+    <!-- Sección de Gráficos -->
+    <div class="charts-section">
+        <div class="charts-container">
+            <h3><i class="fas fa-chart-bar"></i> Análisis de Tendencias</h3>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h4>Issues por Mes</h4>
+                    <canvas id="issuesByMonthChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>Distribución por Prioridad (Mes Actual)</h4>
+                    <canvas id="priorityDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Métricas de SLA -->
+    <div class="sla-metrics-section">
+        <div class="sla-container">
+            <h3><i class="fas fa-clock"></i> Métricas de SLA</h3>
+            <div class="sla-criteria-compact">
+                <span><strong>P1:</strong> <4h</span>
+                <span><strong>P2:</strong> <8h</span>
+                <span><strong>P3:</strong> 1-2d</span>
+                <span><strong>P4:</strong> 3-5d</span>
+            </div>
+            <div class="sla-grid-compact">
+                <div class="sla-card-compact">
+                    <div class="sla-indicator good">
+                        <i class="fas fa-check-circle"></i>
+                        <span>En Tiempo</span>
+                    </div>
+                    <div class="sla-value" id="sla-good-percentage">85%</div>
+                    <div class="sla-description">≤1 día</div>
+                </div>
+                <div class="sla-card-compact">
+                    <div class="sla-indicator danger">
+                        <i class="fas fa-times-circle"></i>
+                        <span>Fuera SLA</span>
+                    </div>
+                    <div class="sla-value" id="sla-danger-percentage">3%</div>
+                    <div class="sla-description">>2 días</div>
+                    <button class="sla-view-icon" id="view-out-of-sla" title="Ver issues fuera de SLA">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         {% for report in reports %}
@@ -185,7 +240,18 @@
                                         {% for t in report.monthly_details[item.month] %}
                                             <li data-duration="{{ t.duration.total_seconds() }}" data-issue-id="{{ t.id }}" data-priority="{{ t.priority }}">
                                                 <strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}</strong>
-                                                <span class="priority-badge">{{ t.priority }}</span>
+                                                <div class="priority-cell">
+                                                    <span class="priority-badge priority-{{ t.priority }}">{{ t.priority }}</span>
+                                                    <span class="sla-badge {{ 'sla-good' if t.duration.total_seconds() <= get_sla_limit(t.priority) else 'sla-warning' if t.duration.total_seconds() <= get_sla_warning_limit(t.priority) else 'sla-danger' }}">
+                                                        {% if t.duration.total_seconds() <= get_sla_limit(t.priority) %}
+                                                            <i class="fas fa-check"></i> En SLA
+                                                        {% elif t.duration.total_seconds() <= get_sla_warning_limit(t.priority) %}
+                                                            <i class="fas fa-exclamation"></i> Riesgo
+                                                        {% else %}
+                                                            <i class="fas fa-times"></i> Fuera SLA
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
                                                 <span class="duration">{{ format_timedelta(t.duration) }}</span>
                                             </li>
                                         {% endfor %}
@@ -260,480 +326,47 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('click', function (e) {
-            var btn = e.target.closest('.view-details-btn');
-            if (btn) {
-                var id = btn.getAttribute('data-modal-id');
-                var modal = document.getElementById(id);
-                if (modal) {
-                    modal.setAttribute('aria-hidden', 'false');
-                }
-            }
-            
-            // Manejar clic en números de issue
-            var issueLink = e.target.closest('.issue-link');
-            if (issueLink) {
-                var issueId = issueLink.getAttribute('data-issue-id');
-                if (issueId) {
-                    showIssueDetails(issueId);
-                }
-            }
-            
-            if (e.target.classList.contains('close-btn') || e.target.closest('.close-btn')) {
-                var overlay = e.target.closest('.modal-overlay');
-                if (overlay) overlay.setAttribute('aria-hidden', 'true');
-            }
-        });
-        
-        // Función para mostrar detalles del issue
-        function showIssueDetails(issueId) {
-            var modal = document.getElementById('issue-details-modal');
-            var content = document.getElementById('issue-details-content');
-            
-            // Mostrar modal con spinner de carga
-            content.innerHTML = `
-                <div class="loading-spinner">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Cargando detalles del issue...</p>
+    <!-- Modal para Issues Fuera de SLA -->
+    <div class="modal-overlay" id="out-of-sla-modal" aria-hidden="true">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Issues Fuera de SLA</h3>
+                <button class="modal-close" aria-label="Cerrar modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="sla-stats">
+                    <p>Estos issues excedieron el tiempo límite de SLA según su prioridad:</p>
                 </div>
-            `;
-            modal.setAttribute('aria-hidden', 'false');
-            
-            // Hacer petición al servidor
-            fetch(`/issue-details/${issueId}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Formatear la descripción (remover HTML si existe)
-                    var description = data.description || 'Sin descripción';
-                    if (description.includes('<')) {
-                        // Crear un elemento temporal para extraer solo el texto
-                        var temp = document.createElement('div');
-                        temp.innerHTML = description;
-                        description = temp.textContent || temp.innerText || 'Sin descripción';
-                    }
-                    
-                    // Mostrar los detalles
-                    let commentsHtml = '';
-                    if (data.comments && data.comments.length > 0) {
-                        commentsHtml = `
-                            <div class="issue-detail-item">
-                                <strong>Comentarios:</strong>
-                                <div class="comments-section">
-                                    <button class="view-comments-btn" onclick="toggleComments(${data.id})">
-                                        <i class="fas fa-comments"></i> Ver todos los comentarios (${data.comments.length})
+                <div class="ticket-list-header">
+                    <span class="sortable-header">
+                        Issue
+                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="issue" title="Ordenar por Issue ID">
+                            <i class="fas fa-sort sort-icon"></i>
+                        </button>
+                    </span>
+                    <span class="sortable-header">
+                        Prioridad
+                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="priority" title="Ordenar por prioridad">
+                            <i class="fas fa-sort sort-icon"></i>
+                        </button>
+                    </span>
+                    <span class="sortable-header">
+                        Tiempo
+                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="duration" title="Ordenar por tiempo">
+                            <i class="fas fa-sort sort-icon"></i>
                                     </button>
-                                    <div id="comments-${data.id}" class="comments-list" style="display: none;">
-                                        ${data.comments.map(comment => `
-                                            <div class="comment-item">
-                                                <div class="comment-header">
-                                                    <strong>${comment.created_by}</strong>
-                                                    <span class="comment-date">${comment.created_date_formatted}</span>
+                    </span>
                                                 </div>
-                                                <div class="comment-text">${comment.text}</div>
-                                            </div>
-                                        `).join('')}
+                <ul class="ticket-list" data-modal-id="out-of-sla-modal" id="out-of-sla-list">
+                    <!-- Los issues fuera de SLA se cargarán dinámicamente -->
+                </ul>
                                     </div>
                                 </div>
                             </div>
-                        `;
-                    } else {
-                        commentsHtml = `
-                            <div class="issue-detail-item">
-                                <strong>Comentarios:</strong>
-                                <span class="no-comments">No hay comentarios disponibles</span>
-                            </div>
-                        `;
-                    }
-                    
-                    content.innerHTML = `
-                        <div class="issue-details">
-                            <div class="issue-detail-item">
-                                <strong>Número de Issue:</strong>
-                                <span>#${data.id}</span>
-                            </div>
-                            <div class="issue-detail-item">
-                                <strong>Título:</strong>
-                                <span>${data.title}</span>
-                            </div>
-                            <div class="issue-detail-item">
-                                <strong>Descripción:</strong>
-                                <div class="issue-description">${description}</div>
-                            </div>
-                            <div class="issue-detail-item">
-                                <strong>Fecha de Creación:</strong>
-                                <span>${data.created_date_formatted}</span>
-                            </div>
-                            <div class="issue-detail-item">
-                                <strong>Fecha de Finalización:</strong>
-                                <span>${data.state_change_date_formatted}</span>
-                            </div>
-                            <div class="issue-detail-item">
-                                <strong>Prioridad:</strong>
-                                <span class="priority-badge">${data.priority}</span>
-                            </div>
-                            <div class="issue-detail-item">
-                                <strong>Estado:</strong>
-                                <span>${data.state}</span>
-                            </div>
-                            <div class="issue-detail-item">
-                                <strong>Asignado a:</strong>
-                                <span>${data.assigned_to}</span>
-                            </div>
-                            ${commentsHtml}
-                        </div>
-                    `;
-                })
-                .catch(error => {
-                    console.error('Error al cargar detalles del issue:', error);
-                    content.innerHTML = `
-                        <div class="error-message">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <p>Error al cargar los detalles del issue. Por favor, inténtalo de nuevo.</p>
-                        </div>
-                    `;
-                });
-        }
-        
-        // Función para mostrar/ocultar comentarios
-        function toggleComments(issueId) {
-            const commentsDiv = document.getElementById(`comments-${issueId}`);
-            const button = document.querySelector(`button[onclick="toggleComments(${issueId})"]`);
-            
-            if (commentsDiv.style.display === 'none') {
-                commentsDiv.style.display = 'block';
-                button.innerHTML = '<i class="fas fa-comments"></i> Ocultar comentarios';
-            } else {
-                commentsDiv.style.display = 'none';
-                button.innerHTML = '<i class="fas fa-comments"></i> Ver todos los comentarios';
-            }
-        }
-        
-        // === Funcionalidad de tooltip para issues ===
-        let tooltipTimeout = null;
-        let currentTooltip = null;
-        
-        // Función para crear y mostrar tooltip
-        function showTooltip(element, title, mouseX, mouseY) {
-            // Limpiar tooltip anterior si existe
-            hideTooltip();
-            
-            // Crear elemento tooltip
-            const tooltip = document.createElement('div');
-            tooltip.className = 'issue-tooltip';
-            tooltip.textContent = title;
-            
-            // Agregar tooltip al body para posicionamiento absoluto
-            document.body.appendChild(tooltip);
-            currentTooltip = tooltip;
-            
-            // Posicionar tooltip desde la posición del mouse hacia la derecha
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            
-            // Posición inicial (aproximada)
-            let left = mouseX + 10; // 10px de separación del cursor
-            let top = mouseY - 40 - 10; // 40px altura aproximada + 10px arriba del cursor
-            
-            // Aplicar posición inicial
-            tooltip.style.left = left + 'px';
-            tooltip.style.top = top + 'px';
-            tooltip.style.position = 'fixed';
-            
-            // Mostrar tooltip con animación
-            setTimeout(() => {
-                if (tooltip && tooltip.parentNode) {
-                    // Obtener dimensiones reales después de que se muestre
-                    const tooltipRect = tooltip.getBoundingClientRect();
-                    const tooltipWidth = tooltipRect.width;
-                    const tooltipHeight = tooltipRect.height;
-                    
-                    // Recalcular posición si es necesario
-                    let newLeft = mouseX + 10;
-                    let newTop = mouseY - tooltipHeight - 10;
-                    
-                    // Ajustar si se sale por la derecha
-                    if (newLeft + tooltipWidth > viewportWidth) {
-                        newLeft = mouseX - tooltipWidth - 10;
-                    }
-                    
-                    // Ajustar si se sale por arriba
-                    if (newTop < 10) {
-                        newTop = mouseY + 10;
-                    }
-                    
-                    // Aplicar posición corregida
-                    tooltip.style.left = newLeft + 'px';
-                    tooltip.style.top = newTop + 'px';
-                    
-                    tooltip.classList.add('show');
-                }
-            }, 10);
-        }
-        
-        // Función para ocultar tooltip
-        function hideTooltip() {
-            if (currentTooltip && currentTooltip.parentNode) {
-                currentTooltip.classList.remove('show');
-                setTimeout(() => {
-                    if (currentTooltip && currentTooltip.parentNode) {
-                        currentTooltip.parentNode.removeChild(currentTooltip);
-                    }
-                }, 200);
-                currentTooltip = null;
-            }
-        }
-        
-        // Event listeners para tooltip
-        document.addEventListener('mouseenter', function(e) {
-            const issueLink = e.target.closest('.issue-link');
-            if (issueLink && issueLink.getAttribute('data-issue-title')) {
-                const title = issueLink.getAttribute('data-issue-title');
-                
-                // Limpiar timeout anterior si existe
-                if (tooltipTimeout) {
-                    clearTimeout(tooltipTimeout);
-                }
-                
-                // Mostrar tooltip después de 1.5 segundos
-                tooltipTimeout = setTimeout(() => {
-                    showTooltip(issueLink, title, e.clientX, e.clientY);
-                }, 1500);
-            }
-        }, true);
-        
-        document.addEventListener('mouseleave', function(e) {
-            const issueLink = e.target.closest('.issue-link');
-            if (issueLink) {
-                // Limpiar timeout si el mouse sale antes de que aparezca el tooltip
-                if (tooltipTimeout) {
-                    clearTimeout(tooltipTimeout);
-                    tooltipTimeout = null;
-                }
-                
-                // Ocultar tooltip si está visible
-                hideTooltip();
-            }
-        }, true);
-        
-        // Ocultar tooltip al hacer scroll o cambiar de ventana
-        window.addEventListener('scroll', hideTooltip);
-        window.addEventListener('resize', hideTooltip);
-        
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.modal-overlay[aria-hidden="false"]').forEach(function (m) {
-                    m.setAttribute('aria-hidden', 'true');
-                });
-            }
-        });
 
-        // === Funcionalidad de cambio de tema ===
-        const themeToggle = document.getElementById('theme-toggle');
-        const body = document.body;
 
-        // Función para cambiar el tema
-        function toggleTheme() {
-            const currentTheme = body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            
-            // Cambiar solo el título del botón
-            if (newTheme === 'dark') {
-                themeToggle.title = 'Cambiar a modo claro';
-            } else {
-                themeToggle.title = 'Cambiar a modo oscuro';
-            }
-        }
-
-        // Función para cargar el tema guardado
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            body.setAttribute('data-theme', savedTheme);
-            
-            if (savedTheme === 'dark') {
-                themeToggle.title = 'Cambiar a modo claro';
-            } else {
-                themeToggle.title = 'Cambiar a modo oscuro';
-            }
-        }
-
-        // Event listener para el botón de tema
-        themeToggle.addEventListener('click', toggleTheme);
-
-        // Cargar el tema al iniciar la página
-        loadTheme();
-
-        // === Funcionalidad de ordenamiento ===
-        let sortStates = {}; // Almacenar el estado de ordenamiento para cada modal
-
-        // Función para ordenar la lista de issues
-        function sortIssues(modalId, sortDirection, sortType) {
-            console.log('sortIssues llamada con modalId:', modalId, 'sortDirection:', sortDirection, 'sortType:', sortType);
-            const ticketList = document.querySelector(`.ticket-list[data-modal-id="${modalId}"]`);
-            console.log('ticketList encontrado:', ticketList);
-            if (!ticketList) {
-                console.log('No se encontró ticketList para modalId:', modalId);
-                return;
-            }
-
-            const items = Array.from(ticketList.querySelectorAll('li'));
-            console.log('Items encontrados:', items.length);
-            
-            // Guardar el orden original si no está guardado
-            if (!sortStates[modalId] || !sortStates[modalId].originalOrder) {
-                sortStates[modalId] = {
-                    originalOrder: items.map(item => item.outerHTML)
-                };
-            }
-
-            if (sortDirection === 'none') {
-                // Restaurar orden original
-                ticketList.innerHTML = sortStates[modalId].originalOrder.join('');
-                sortStates[modalId].currentSort = 'none';
-                sortStates[modalId].currentSortType = null;
-            } else {
-                // Ordenar según el tipo especificado
-                items.sort((a, b) => {
-                    let valueA, valueB;
-                    
-                    switch (sortType) {
-                        case 'issue':
-                            valueA = parseInt(a.getAttribute('data-issue-id'));
-                            valueB = parseInt(b.getAttribute('data-issue-id'));
-                            break;
-                        case 'priority':
-                            valueA = parseInt(a.getAttribute('data-priority')) || 999; // 999 para valores nulos
-                            valueB = parseInt(b.getAttribute('data-priority')) || 999;
-                            break;
-                        case 'duration':
-                        default:
-                            valueA = parseFloat(a.getAttribute('data-duration'));
-                            valueB = parseFloat(b.getAttribute('data-duration'));
-                            break;
-                    }
-                    
-                    if (sortDirection === 'asc') {
-                        return valueA - valueB;
-                    } else {
-                        return valueB - valueA;
-                    }
-                });
-
-                // Limpiar la lista y agregar elementos ordenados
-                ticketList.innerHTML = '';
-                items.forEach(item => ticketList.appendChild(item));
-                sortStates[modalId].currentSort = sortDirection;
-                sortStates[modalId].currentSortType = sortType;
-            }
-
-            // Actualizar el ícono del botón
-            updateSortButton(modalId, sortDirection, sortType);
-        }
-
-        // Función para actualizar el ícono del botón de ordenamiento
-        function updateSortButton(modalId, sortDirection, sortType) {
-            // Actualizar todos los botones de ordenamiento en este modal
-            const allSortBtns = document.querySelectorAll(`.sort-btn[data-modal-id="${modalId}"]`);
-            
-            allSortBtns.forEach(sortBtn => {
-                const icon = sortBtn.querySelector('.sort-icon');
-                if (!icon) return;
-
-                const btnSortType = sortBtn.getAttribute('data-sort-type');
-                
-                // Remover clases anteriores
-                icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
-                
-                // Solo actualizar el botón que corresponde al tipo de ordenamiento actual
-                if (btnSortType === sortType) {
-                    // Agregar clase correspondiente
-                    switch (sortDirection) {
-                        case 'asc':
-                            icon.classList.add('fa-sort-up');
-                            sortBtn.title = 'Ordenar descendente';
-                            break;
-                        case 'desc':
-                            icon.classList.add('fa-sort-down');
-                            sortBtn.title = 'Sin ordenar';
-                            break;
-                        case 'none':
-                        default:
-                            icon.classList.add('fa-sort');
-                            sortBtn.title = 'Ordenar ascendente';
-                            break;
-                    }
-                } else {
-                    // Resetear otros botones
-                    icon.classList.add('fa-sort');
-                    switch (btnSortType) {
-                        case 'issue':
-                            sortBtn.title = 'Ordenar por Issue ID';
-                            break;
-                        case 'priority':
-                            sortBtn.title = 'Ordenar por prioridad';
-                            break;
-                        case 'duration':
-                            sortBtn.title = 'Ordenar por promedio';
-                            break;
-                    }
-                }
-            });
-        }
-
-        // Event listener para el botón de ordenamiento
-        document.addEventListener('click', function(e) {
-            const sortBtn = e.target.closest('.sort-btn');
-            if (sortBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const modalId = sortBtn.getAttribute('data-modal-id');
-                const sortType = sortBtn.getAttribute('data-sort-type');
-                console.log('Botón de ordenamiento clickeado, modalId:', modalId, 'sortType:', sortType);
-                
-                if (!modalId || !sortType) {
-                    console.log('No se encontró modalId o sortType');
-                    return;
-                }
-
-                // Obtener el estado actual de ordenamiento
-                const currentSort = sortStates[modalId]?.currentSort || 'none';
-                const currentSortType = sortStates[modalId]?.currentSortType;
-                console.log('Estado actual de ordenamiento:', currentSort, 'tipo:', currentSortType);
-                
-                // Determinar el siguiente estado
-                let nextSort;
-                
-                // Si es un tipo diferente al actual, empezar con ascendente
-                if (currentSortType !== sortType) {
-                    nextSort = 'asc';
-                } else {
-                    // Si es el mismo tipo, ciclar entre los estados
-                    switch (currentSort) {
-                        case 'none':
-                            nextSort = 'asc';
-                            break;
-                        case 'asc':
-                            nextSort = 'desc';
-                            break;
-                        case 'desc':
-                            nextSort = 'none';
-                            break;
-                        default:
-                            nextSort = 'asc';
-                            break;
-                    }
-                }
-
-                console.log('Próximo estado de ordenamiento:', nextSort, 'tipo:', sortType);
-                
-                // Aplicar el nuevo ordenamiento
-                sortIssues(modalId, nextSort, sortType);
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
