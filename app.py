@@ -876,6 +876,7 @@ def get_sla_warning_limit(priority):
     }
     return warning_limits.get(priority, 1 * 24 * 3600)  # Default: 1 día
 
+
 if __name__ == '__main__':
     #app.run(debug=True)
     app.run(host='0.0.0.0', port=5000, debug=True)
