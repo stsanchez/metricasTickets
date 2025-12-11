@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
 
@@ -20,6 +22,8 @@
             <h1>Dashboard de Métricas de Soporte</h1>
             <p>Reportes generados para 'Issues' creados desde el {{ START_DATE }}</p>
             <div class="download-buttons">
+                <a href="{{ url_for('annual_report') }}" class="download-btn" style="background-color: #17a2b8;"><i
+                        class="fas fa-chart-line"></i> Reporte Anual</a>
                 <a href="{{ url_for('export_pdf') }}" class="download-btn pdf"><i class="fas fa-file-pdf"></i> PDF</a>
                 <button id="export-excel" class="download-btn excel"><i class="fas fa-file-excel"></i> Excel</button>
             </div>
@@ -56,10 +60,12 @@
         <div class="sla-container">
             <h3><i class="fas fa-clock"></i> Métricas de SLA</h3>
             <div class="sla-criteria-compact">
-                <span><strong>P1:</strong> <4h</span>
-                <span><strong>P2:</strong> <8h</span>
-                <span><strong>P3:</strong> 1-2d</span>
-                <span><strong>P4:</strong> 3-5d</span>
+                <span><strong>P1:</strong>
+                    <4h< /span>
+                        <span><strong>P2:</strong>
+                            <8h< /span>
+                                <span><strong>P3:</strong> 1-2d</span>
+                                <span><strong>P4:</strong> 3-5d</span>
             </div>
             <div class="sla-grid-compact">
                 <div class="sla-card-compact">
@@ -91,95 +97,98 @@
             <h2>{{ report.title }}</h2>
 
             {% if not report.has_data %}
-                <p class="no-data">No se encontraron 'Issues' que cumplan los criterios.</p>
+            <p class="no-data">No se encontraron 'Issues' que cumplan los criterios.</p>
             {% else %}
-                <div class="stats-section">
-                    <h3><i class="fas fa-calendar-alt"></i> Desglose Mensual</h3>
-                    <ul>
-                        {% for item in report.monthly_breakdown %}
-                            {% if item.is_previous_year %}
-                                <li class="month-previous-year">
-                                    <div>
-                                        <div class="month-label">📅 Mes anterior para comparación</div>
-                                        <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
-                                    </div>
-                                    <span class="monthly-right">
-                                        {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
-                                            <button class="view-details-btn" 
-                                                    data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
-                                                    title="Ver detalle">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        {% endif %}
-                                    </span>
-                                </li>
-                            {% else %}
-                                <li>
-                                    <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
-                                    <span class="monthly-right">
-                                        {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and report.monthly_details.get(item.month) %}
-                                            <button class="view-details-btn" 
-                                                    data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
-                                                    title="Ver detalle">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                        {% endif %}
-                                    </span>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                    </ul>
-                    
-                    <!-- Total de tickets -->
-                    <div class="total-tickets">
-                        <strong>TOTAL: {{ report.total_tickets }} issues</strong>
-                    </div>
-                    
-                    {% if report.monthly_breakdown and report.monthly_breakdown[-1].is_previous_year %}
-                        <p style="font-size: 0.9em; color: var(--text-muted); margin-top: 12px; font-style: italic;">
-                            💡 <strong>Nota:</strong> Se incluye diciembre del año anterior para facilitar la comparación con enero actual.
-                        </p>
-                    {% endif %}
-                </div>
-
-                <div class="stats-section">
-                    <h3><i class="fas fa-chart-line"></i> Métricas Generales</h3>
-                    <p><strong>Promedio mensual:</strong> {{ format_timedelta(report.avg_duration) }}</p>
-                    {% if report.priority_breakdown %}
-                        <ul>
-                            {% for item in report.priority_breakdown %}
-                                <li>
-                                    <span class="priority-left">
-                                        <strong>Prioridad {{ item.priority }}:</strong>
-                                        {{ item.count }} tickets
-                                        (promedio: {{ format_timedelta(item.avg_duration) }})
-                                    </span>
-                                    {% if report.title.startswith('REPORTE INDIVIDUAL') and report.priority_details and report.priority_details.get(item.priority) %}
-                                        <button class="view-details-btn" 
-                                                data-modal-id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}" 
-                                                title="Ver detalle">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-                </div>
-                
-                <div class="stats-section">
-                    <h3><i class="fas fa-trophy"></i> Top 5 Issues más Largos</h3>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>Los 5 Issues que tomaron más tiempo en resolverse</span>
-                        {% if report.title.startswith('REPORTE INDIVIDUAL') and report.top_issues %}
-                            <button class="view-details-btn" 
-                                    data-modal-id="modal-top5-{{ report.title|replace(' ', '-') }}" 
-                                    title="Ver detalle">
+            <div class="stats-section">
+                <h3><i class="fas fa-calendar-alt"></i> Desglose Mensual</h3>
+                <ul>
+                    {% for item in report.monthly_breakdown %}
+                    {% if item.is_previous_year %}
+                    <li class="month-previous-year">
+                        <div>
+                            <div class="month-label">📅 Mes anterior para comparación</div>
+                            <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
+                        </div>
+                        <span class="monthly-right">
+                            {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and
+                            report.monthly_details.get(item.month) %}
+                            <button class="view-details-btn"
+                                data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}"
+                                title="Ver detalle">
                                 <i class="fas fa-eye"></i>
                             </button>
-                        {% endif %}
-                    </div>
+                            {% endif %}
+                        </span>
+                    </li>
+                    {% else %}
+                    <li>
+                        <span class="monthly-left"><strong>{{ item.month }}:</strong> {{ item.count }} Issues</span>
+                        <span class="monthly-right">
+                            {% if report.title.startswith('REPORTE INDIVIDUAL') and report.monthly_details and
+                            report.monthly_details.get(item.month) %}
+                            <button class="view-details-btn"
+                                data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}"
+                                title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% endif %}
+                        </span>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+
+                <!-- Total de tickets -->
+                <div class="total-tickets">
+                    <strong>TOTAL: {{ report.total_tickets }} issues</strong>
                 </div>
+
+                {% if report.monthly_breakdown and report.monthly_breakdown[-1].is_previous_year %}
+                <p style="font-size: 0.9em; color: var(--text-muted); margin-top: 12px; font-style: italic;">
+                    💡 <strong>Nota:</strong> Se incluye diciembre del año anterior para facilitar la comparación con
+                    enero actual.
+                </p>
+                {% endif %}
+            </div>
+
+            <div class="stats-section">
+                <h3><i class="fas fa-chart-line"></i> Métricas Generales</h3>
+                <p><strong>Promedio mensual:</strong> {{ format_timedelta(report.avg_duration) }}</p>
+                {% if report.priority_breakdown %}
+                <ul>
+                    {% for item in report.priority_breakdown %}
+                    <li>
+                        <span class="priority-left">
+                            <strong>Prioridad {{ item.priority }}:</strong>
+                            {{ item.count }} tickets
+                            (promedio: {{ format_timedelta(item.avg_duration) }})
+                        </span>
+                        {% if report.title.startswith('REPORTE INDIVIDUAL') and report.priority_details and
+                        report.priority_details.get(item.priority) %}
+                        <button class="view-details-btn"
+                            data-modal-id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}"
+                            title="Ver detalle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+
+            <div class="stats-section">
+                <h3><i class="fas fa-trophy"></i> Top 5 Issues más Largos</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Los 5 Issues que tomaron más tiempo en resolverse</span>
+                    {% if report.title.startswith('REPORTE INDIVIDUAL') and report.top_issues %}
+                    <button class="view-details-btn" data-modal-id="modal-top5-{{ report.title|replace(' ', '-') }}"
+                        title="Ver detalle">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
             {% endif %}
         </div>
         {% endfor %}
@@ -187,125 +196,139 @@
 
     <!-- === MODALES (fuera de los reportes, al final del body) === -->
     {% for report in reports %}
-        {% if report.title.startswith('REPORTE INDIVIDUAL') %}
-            
-            {% for item in report.monthly_breakdown %}
-                {% if report.monthly_details and report.monthly_details.get(item.month) %}
-                    <div id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" 
-                         class="modal-overlay" aria-hidden="true">
-                        <div class="modal" role="dialog" aria-modal="true">
-                            <div class="modal-header">
-                                <h4>Detalle de {{ item.month }}</h4>
-                                <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-                            </div>
-                            <div class="modal-body">
-                                {% if report.monthly_priority_breakdown and report.monthly_priority_breakdown.get(item.month) %}
-                                    <div class="monthly-metrics-section">
-                                        <h5>Métricas por Prioridad</h5>
-                                        <ul class="priority-metrics-list">
-                                            {% for priority_item in report.monthly_priority_breakdown[item.month] %}
-                                                <li>
-                                                    <strong>Prioridad {{ priority_item.priority }}:</strong>
-                                                    {{ priority_item.count }} tickets
-                                                    (promedio: {{ format_timedelta(priority_item.avg_duration) }})
-                                                </li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
-                                {% endif %}
-                                <div class="tickets-section">
-                                    <h5>Listado de Issues</h5>
-                                    <!-- Encabezado de columnas -->
-                                    <div class="ticket-list-header">
-                                        <span class="sortable-header">
-                                            Issue
-                                            <button class="sort-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" data-sort-type="issue" title="Ordenar por Issue ID">
-                                                <i class="fas fa-sort sort-icon"></i>
-                                            </button>
-                                        </span>
-                                        <span class="sortable-header">
-                                            Prioridad
-                                            <button class="sort-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" data-sort-type="priority" title="Ordenar por prioridad">
-                                                <i class="fas fa-sort sort-icon"></i>
-                                            </button>
-                                        </span>
-                                        <span class="sortable-header">
-                                            Promedio
-                                            <button class="sort-btn" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}" data-sort-type="duration" title="Ordenar por promedio">
-                                                <i class="fas fa-sort sort-icon"></i>
-                                            </button>
-                                        </span>
-                                    </div>
-                                    <ul class="ticket-list" data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}">
-                                        {% for t in report.monthly_details[item.month] %}
-                                            <li data-duration="{{ t.duration.total_seconds() }}" data-issue-id="{{ t.id }}" data-priority="{{ t.priority }}">
-                                                <strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}</strong>
-                                                <div class="priority-cell">
-                                                    <span class="priority-badge priority-{{ t.priority }}">{{ t.priority }}</span>
-                                                    <span class="sla-badge {{ 'sla-good' if t.duration.total_seconds() <= get_sla_limit(t.priority) else 'sla-warning' if t.duration.total_seconds() <= get_sla_warning_limit(t.priority) else 'sla-danger' }}">
-                                                        {% if t.duration.total_seconds() <= get_sla_limit(t.priority) %}
-                                                            <i class="fas fa-check"></i> En SLA
-                                                        {% elif t.duration.total_seconds() <= get_sla_warning_limit(t.priority) %}
-                                                            <i class="fas fa-exclamation"></i> Riesgo
-                                                        {% else %}
-                                                            <i class="fas fa-times"></i> Fuera SLA
-                                                        {% endif %}
-                                                    </span>
-                                                </div>
-                                                <span class="duration">{{ format_timedelta(t.duration) }}</span>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-            {% endfor %}
+    {% if report.title.startswith('REPORTE INDIVIDUAL') %}
 
-            {% if report.priority_details %}
-                {% for item in report.priority_breakdown %}
-                    {% if report.priority_details.get(item.priority) %}
-                        <div id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}" 
-                             class="modal-overlay" aria-hidden="true">
-                            <div class="modal" role="dialog" aria-modal="true">
-                                <div class="modal-header">
-                                    <h4>Detalle de Prioridad {{ item.priority }}</h4>
-                                    <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-                                </div>
-                                <div class="modal-body">
-                                    <ul class="ticket-list">
-                                        {% for t in report.priority_details[item.priority] %}
-                                            <li><strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id }}:</strong> {{ format_timedelta(t.duration) }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            {% endif %}
-
-            {% if report.top_issues %}
-                <div id="modal-top5-{{ report.title|replace(' ', '-') }}" 
-                     class="modal-overlay" aria-hidden="true">
-                    <div class="modal" role="dialog" aria-modal="true">
-                        <div class="modal-header">
-                            <h4>Top 5 Issues más Largos</h4>
-                            <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="modal-body">
-                            <ul class="ticket-list">
-                                {% for item in report.top_issues %}
-                                    <li><strong class="issue-link" data-issue-id="{{ item.id }}" data-issue-title="{{ item.title }}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ item.id }}:</strong> {{ format_timedelta(item.duration) }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    </div>
+    {% for item in report.monthly_breakdown %}
+    {% if report.monthly_details and report.monthly_details.get(item.month) %}
+    <div id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}"
+        class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h4>Detalle de {{ item.month }}</h4>
+                <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                {% if report.monthly_priority_breakdown and report.monthly_priority_breakdown.get(item.month) %}
+                <div class="monthly-metrics-section">
+                    <h5>Métricas por Prioridad</h5>
+                    <ul class="priority-metrics-list">
+                        {% for priority_item in report.monthly_priority_breakdown[item.month] %}
+                        <li>
+                            <strong>Prioridad {{ priority_item.priority }}:</strong>
+                            {{ priority_item.count }} tickets
+                            (promedio: {{ format_timedelta(priority_item.avg_duration) }})
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
-            {% endif %}
+                {% endif %}
+                <div class="tickets-section">
+                    <h5>Listado de Issues</h5>
+                    <!-- Encabezado de columnas -->
+                    <div class="ticket-list-header">
+                        <span class="sortable-header">
+                            Issue
+                            <button class="sort-btn"
+                                data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}"
+                                data-sort-type="issue" title="Ordenar por Issue ID">
+                                <i class="fas fa-sort sort-icon"></i>
+                            </button>
+                        </span>
+                        <span class="sortable-header">
+                            Prioridad
+                            <button class="sort-btn"
+                                data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}"
+                                data-sort-type="priority" title="Ordenar por prioridad">
+                                <i class="fas fa-sort sort-icon"></i>
+                            </button>
+                        </span>
+                        <span class="sortable-header">
+                            Promedio
+                            <button class="sort-btn"
+                                data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}"
+                                data-sort-type="duration" title="Ordenar por promedio">
+                                <i class="fas fa-sort sort-icon"></i>
+                            </button>
+                        </span>
+                    </div>
+                    <ul class="ticket-list"
+                        data-modal-id="modal-{{ loop.index0 }}-{{ report.title|replace(' ', '-') }}-{{ item.month|replace(' ', '-') }}">
+                        {% for t in report.monthly_details[item.month] %}
+                        <li data-duration="{{ t.duration.total_seconds() }}" data-issue-id="{{ t.id }}"
+                            data-priority="{{ t.priority }}">
+                            <strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}"
+                                style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id
+                                }}</strong>
+                            <div class="priority-cell">
+                                <span class="priority-badge priority-{{ t.priority }}">{{ t.priority }}</span>
+                                <span
+                                    class="sla-badge {{ 'sla-good' if t.duration.total_seconds() <= get_sla_limit(t.priority) else 'sla-warning' if t.duration.total_seconds() <= get_sla_warning_limit(t.priority) else 'sla-danger' }}">
+                                    {% if t.duration.total_seconds() <= get_sla_limit(t.priority) %} <i
+                                        class="fas fa-check"></i> En SLA
+                                        {% elif t.duration.total_seconds() <= get_sla_warning_limit(t.priority) %} <i
+                                            class="fas fa-exclamation"></i> Riesgo
+                                            {% else %}
+                                            <i class="fas fa-times"></i> Fuera SLA
+                                            {% endif %}
+                                </span>
+                            </div>
+                            <span class="duration">{{ format_timedelta(t.duration) }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
 
-        {% endif %}
+    {% if report.priority_details %}
+    {% for item in report.priority_breakdown %}
+    {% if report.priority_details.get(item.priority) %}
+    <div id="modal-priority-{{ item.priority }}-{{ report.title|replace(' ', '-') }}" class="modal-overlay"
+        aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h4>Detalle de Prioridad {{ item.priority }}</h4>
+                <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <ul class="ticket-list">
+                    {% for t in report.priority_details[item.priority] %}
+                    <li><strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}"
+                            style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id
+                            }}:</strong> {{ format_timedelta(t.duration) }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    {% if report.top_issues %}
+    <div id="modal-top5-{{ report.title|replace(' ', '-') }}" class="modal-overlay" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <h4>Top 5 Issues más Largos</h4>
+                <button class="close-btn" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <ul class="ticket-list">
+                    {% for item in report.top_issues %}
+                    <li><strong class="issue-link" data-issue-id="{{ item.id }}" data-issue-title="{{ item.title }}"
+                            style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ item.id
+                            }}:</strong> {{ format_timedelta(item.duration) }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
     {% endfor %}
 
     <!-- Modal para detalles del issue -->
@@ -342,31 +365,35 @@
                 <div class="ticket-list-header">
                     <span class="sortable-header">
                         Issue
-                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="issue" title="Ordenar por Issue ID">
+                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="issue"
+                            title="Ordenar por Issue ID">
                             <i class="fas fa-sort sort-icon"></i>
                         </button>
                     </span>
                     <span class="sortable-header">
                         Prioridad
-                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="priority" title="Ordenar por prioridad">
+                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="priority"
+                            title="Ordenar por prioridad">
                             <i class="fas fa-sort sort-icon"></i>
                         </button>
                     </span>
                     <span class="sortable-header">
                         Tiempo
-                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="duration" title="Ordenar por tiempo">
+                        <button class="sort-btn" data-modal-id="out-of-sla-modal" data-sort-type="duration"
+                            title="Ordenar por tiempo">
                             <i class="fas fa-sort sort-icon"></i>
-                                    </button>
+                        </button>
                     </span>
-                                                </div>
+                </div>
                 <ul class="ticket-list" data-modal-id="out-of-sla-modal" id="out-of-sla-list">
                     <!-- Los issues fuera de SLA se cargarán dinámicamente -->
                 </ul>
-                                    </div>
-                                </div>
-                            </div>
+            </div>
+        </div>
+    </div>
 
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>

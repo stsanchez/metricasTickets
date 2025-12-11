@@ -39,7 +39,9 @@ WORK_END_HOUR = 19
 BUSINESS_DAYS = {0, 1, 2, 3, 4}  # 0 = Lunes ... 6 = Domingo
 
 # --- LÓGICA DE DATOS ---
-def get_done_tickets_by_month(user_list):
+def get_done_tickets_by_month(user_list, start_date=None):
+    if start_date is None:
+        start_date = START_DATE
     try:
         assigned_to_conditions = [f"[System.AssignedTo] = '{user}'" for user in user_list]
         assigned_to_clause = " OR ".join(assigned_to_conditions)
@@ -47,11 +49,11 @@ def get_done_tickets_by_month(user_list):
         query = {"query": f"""
                 SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = @project
                 AND [System.WorkItemType] = 'Issue' AND [System.State] = 'Done'
-                AND [System.CreatedDate] >= '{START_DATE}T00:00:00Z' AND ({assigned_to_clause})
+                AND [System.CreatedDate] >= '{start_date}T00:00:00Z' AND ({assigned_to_clause})
                 ORDER BY [Microsoft.VSTS.Common.StateChangeDate] DESC """}
         authorization = str(base64.b64encode(bytes(':' + PAT, 'ascii')), 'ascii')
         headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + authorization}
-        print(f"🛰️  Buscando 'Issues' para: {', '.join(user_list)} (a partir de {START_DATE})...")
+        print(f"🛰️  Buscando 'Issues' para: {', '.join(user_list)} (a partir de {start_date})...")
         response = requests.post(url=wiql_url, headers=headers, json=query)
         response.raise_for_status()
         work_items = response.json().get("workItems", [])
@@ -229,6 +231,8 @@ def generate_pdf_report(reports_data):
                 report_type = "Reporte individual"
             elif report_type == "reporte combinado":
                 report_type = "Reporte combinado"
+            elif report_type == "reporte anual":
+                report_type = "Reporte Anual"
             formatted_title = f"{report_type}: {user_name}"
         else:
             formatted_title = report["title"]
@@ -328,6 +332,8 @@ def generate_pdf_report(reports_data):
                 report_type = "Reporte individual"
             elif report_type == "reporte combinado":
                 report_type = "Reporte combinado"
+            elif report_type == "reporte anual":
+                report_type = "Reporte Anual"
             formatted_title = f"{report_type}: {user_name}"
         else:
             formatted_title = report["title"]
@@ -418,6 +424,8 @@ def generate_pdf_report(reports_data):
                 report_type = "Reporte individual"
             elif report_type == "reporte combinado":
                 report_type = "Reporte combinado"
+            elif report_type == "reporte anual":
+                report_type = "Reporte Anual"
             formatted_title = f"{report_type}: {user_name}"
         else:
             formatted_title = report["title"]
@@ -876,6 +884,231 @@ def get_sla_warning_limit(priority):
     }
     return warning_limits.get(priority, 1 * 24 * 3600)  # Default: 1 día
 
+
+@app.route('/annual-report')
+def annual_report():
+    """Genera el reporte anual con fecha de inicio 01/01 del año actual"""
+    current_year = datetime.now().year
+    annual_start_date = f"{current_year}-01-01"
+    print(f"Generando reporte anual desde {annual_start_date}...")
+    
+    reports_data = []
+    # Solo Geleser y Stefano para el reporte anual
+    report_definitions = [
+        {"title": "REPORTE ANUAL: Geleser Pimentel", "users": ["Geleser Pimentel"]},
+        {"title": "REPORTE ANUAL: Stefano Sanchez", "users": ["Stefano Sanchez"]}
+    ]
+
+    for definition in report_definitions:
+        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"], start_date=annual_start_date)
+        
+        report = {"title": definition["title"], "has_data": False}
+        
+        if results:
+            report["has_data"] = True
+            monthly_breakdown = []
+            # Ordenar cronológicamente para el reporte anual (Enero -> Diciembre)
+            sorted_months = sorted(results.items(), key=lambda item: (int(item[0].split(" ")[1]), meses_es.index(item[0].split(" ")[0])))
+            
+            for month, count in sorted_months:
+                month_data = {"month": month, "count": count}
+                durations_this_month = monthly_durations.get(month, [])
+                if durations_this_month:
+                    month_data["avg_duration"] = sum(durations_this_month, timedelta()) / len(durations_this_month)
+                    month_data["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations_this_month]))
+                else:
+                    month_data["avg_duration"] = None
+                    month_data["median_duration"] = None
+                monthly_breakdown.append(month_data)
+
+            report["total_tickets"] = sum(item["count"] for item in monthly_breakdown)
+            report["monthly_breakdown"] = monthly_breakdown
+            report["monthly_details"] = monthly_ticket_details
+            
+            # Métricas globales del año
+            if details:
+                durations = [d['duration'] for d in details]
+                report["avg_duration"] = sum(durations, timedelta()) / len(durations) if durations else timedelta(0)
+                report["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations]))
+                
+                # Desglose por prioridad
+                priority_breakdown = []
+                for p in [1, 2, 3, 4]:
+                    count_p = priority_counts.get(p, 0)
+                    durations_p = priority_durations.get(p, [])
+                    avg_p = (sum(durations_p, timedelta()) / len(durations_p)) if durations_p else None
+                    priority_breakdown.append({
+                        'priority': p,
+                        'count': count_p,
+                        'avg_duration': avg_p
+                    })
+                report['priority_breakdown'] = priority_breakdown
+
+        reports_data.append(report)
+
+    # Calcular Grand Total (Suma de ambos)
+    grand_total_tickets = 0
+    grand_total_avg_duration = timedelta(0)
+    total_duration_sum = timedelta(0)
+    total_tickets_count = 0
+
+    for report in reports_data:
+        if report.get("has_data"):
+            grand_total_tickets += report.get("total_tickets", 0)
+            # Para el promedio ponderado global
+            if report.get("avg_duration") and report.get("total_tickets"):
+                total_duration_sum += report["avg_duration"] * report["total_tickets"]
+                total_tickets_count += report["total_tickets"]
+            
+            # Calcular SLA para cada reporte individual
+            sla_met_count = 0
+            total_sla_tickets = 0
+            if report.get("monthly_details"):
+                for month_tickets in report["monthly_details"].values():
+                    for ticket in month_tickets:
+                        total_sla_tickets += 1
+                        sla_limit = get_sla_limit(ticket['priority'])
+                        if ticket['duration'].total_seconds() <= sla_limit:
+                            sla_met_count += 1
+            
+            report["sla_met_count"] = sla_met_count
+            report["total_sla_tickets"] = total_sla_tickets
+            sla_percentage = (sla_met_count / total_sla_tickets * 100) if total_sla_tickets > 0 else 0
+            report["sla_percentage"] = sla_percentage
+            
+            # Determinar color del SLA
+            if sla_percentage >= 70:
+                report["sla_color"] = "#22c55e" # Green
+            elif sla_percentage >= 60:
+                report["sla_color"] = "#f59e0b" # Yellow
+            else:
+                report["sla_color"] = "#ef4444" # Red
+
+    if total_tickets_count > 0:
+        grand_total_avg_duration = total_duration_sum / total_tickets_count
+
+    grand_total_data = {
+        "total_tickets": grand_total_tickets,
+        "avg_duration": grand_total_avg_duration
+    }
+
+    # Crear versión serializable para JavaScript (gráficos)
+    reports_data_js = []
+    for r in reports_data:
+        r_js = r.copy()
+        if r_js.get("has_data"):
+            # Convertir timedeltas en monthly_breakdown
+            new_monthly = []
+            for m in r_js["monthly_breakdown"]:
+                m_copy = m.copy()
+                if m_copy.get("avg_duration"):
+                    m_copy["avg_duration"] = m_copy["avg_duration"].total_seconds()
+                # Eliminamos median_duration de JS también
+                if "median_duration" in m_copy:
+                    del m_copy["median_duration"]
+                new_monthly.append(m_copy)
+            r_js["monthly_breakdown"] = new_monthly
+            
+            # Convertir timedeltas en priority_breakdown
+            if r_js.get("priority_breakdown"):
+                new_priority = []
+                for p in r_js["priority_breakdown"]:
+                    p_copy = p.copy()
+                    if p_copy.get("avg_duration"):
+                        p_copy["avg_duration"] = p_copy["avg_duration"].total_seconds()
+                    new_priority.append(p_copy)
+                r_js["priority_breakdown"] = new_priority
+            
+            # Convertir métricas globales
+            if r_js.get("avg_duration"):
+                r_js["avg_duration"] = r_js["avg_duration"].total_seconds()
+            # Eliminamos median_duration global
+            if "median_duration" in r_js:
+                del r_js["median_duration"]
+                
+            # Eliminar detalles que no se usan en JS y podrían tener objetos complejos
+            if "monthly_details" in r_js:
+                del r_js["monthly_details"]
+            if "priority_details" in r_js:
+                del r_js["priority_details"]
+                
+        reports_data_js.append(r_js)
+
+    return render_template('annual_report.html', 
+                          reports=reports_data, 
+                          reports_js=reports_data_js,
+                          grand_total=grand_total_data,
+                          format_timedelta=format_timedelta, 
+                          START_DATE=annual_start_date,
+                          current_year=current_year)
+
+@app.route('/export-annual-pdf')
+def export_annual_pdf():
+    """Exporta el reporte anual como PDF"""
+    current_year = datetime.now().year
+    annual_start_date = f"{current_year}-01-01"
+    print(f"Generando PDF anual desde {annual_start_date}...")
+    
+    reports_data = []
+    report_definitions = [
+        {"title": "REPORTE ANUAL: Geleser Pimentel", "users": ["Geleser Pimentel"]},
+        {"title": "REPORTE ANUAL: Stefano Sanchez", "users": ["Stefano Sanchez"]}
+    ]
+
+    for definition in report_definitions:
+        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"], start_date=annual_start_date)
+        
+        report = {"title": definition["title"], "has_data": False}
+        
+        if results:
+            report["has_data"] = True
+            monthly_breakdown = []
+            sorted_months = sorted(results.items(), key=lambda item: (int(item[0].split(" ")[1]), meses_es.index(item[0].split(" ")[0])))
+            
+            for month, count in sorted_months:
+                month_data = {"month": month, "count": count}
+                durations_this_month = monthly_durations.get(month, [])
+                if durations_this_month:
+                    month_data["avg_duration"] = sum(durations_this_month, timedelta()) / len(durations_this_month)
+                    month_data["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations_this_month]))
+                else:
+                    month_data["avg_duration"] = None
+                    month_data["median_duration"] = None
+                monthly_breakdown.append(month_data)
+
+            report["total_tickets"] = sum(item["count"] for item in monthly_breakdown)
+            report["monthly_breakdown"] = monthly_breakdown
+            
+            if details:
+                durations = [d['duration'] for d in details]
+                report["avg_duration"] = sum(durations, timedelta()) / len(durations) if durations else timedelta(0)
+                
+                priority_breakdown = []
+                for p in [1, 2, 3, 4]:
+                    count_p = priority_counts.get(p, 0)
+                    durations_p = priority_durations.get(p, [])
+                    avg_p = (sum(durations_p, timedelta()) / len(durations_p)) if durations_p else None
+                    priority_breakdown.append({
+                        'priority': p,
+                        'count': count_p,
+                        'avg_duration': avg_p
+                    })
+                report['priority_breakdown'] = priority_breakdown
+        
+        reports_data.append(report)
+    
+    # Usar una nueva función para el PDF anual o adaptar la existente
+    # Por ahora usaremos la existente pero podríamos crear generate_annual_pdf_report si necesitamos un diseño muy diferente
+    pdf_buffer = generate_pdf_report(reports_data) 
+    
+    filename = f"reporte_anual_{current_year}.pdf"
+    
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf'
+    )
 
 if __name__ == '__main__':
     #app.run(debug=True)

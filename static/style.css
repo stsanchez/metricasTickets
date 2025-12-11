@@ -1316,3 +1316,63 @@ header {
         font-size: 0.8rem;
     }
 }
+
+/* Estilos para el Reporte Anual */
+.annual-report-card {
+    border-top: 5px solid #17a2b8; /* Color distintivo para reporte anual */
+}
+
+.annual-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.summary-item {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.summary-label {
+    font-size: 0.9em;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.summary-value {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #012f60;
+}
+
+.annual-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.annual-table th, .annual-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.annual-table th {
+    background-color: #012f60;
+    color: white;
+    font-weight: 600;
+}
+
+.annual-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}

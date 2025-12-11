@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Anual {{ current_year }} - Soporte IT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo Empresa" class="header-logo">
+        <div class="header-text">
+            <h1>Reporte Anual {{ current_year }}</h1>
+            <p>Resumen de métricas y desempeño desde el {{ START_DATE }}</p>
+            <div class="download-buttons">
+                <a href="{{ url_for('dashboard') }}" class="download-btn" style="background-color: #6c757d;"><i
+                        class="fas fa-arrow-left"></i> Volver</a>
+                <button id="download-pdf-btn" class="download-btn pdf"><i class="fas fa-file-pdf"></i>
+                    Descargar Reporte PDF</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container" id="report-content">
+        <!-- Grand Total Section -->
+        <div class="report-card annual-report-card" style="flex: 1 1 100%; max-width: 100%; border-top-color: #012f60;">
+            <h2 style="text-align: center; font-size: 1.8em; color: #012f60;">RESUMEN GLOBAL {{ current_year }}</h2>
+            <div class="annual-summary-grid"
+                style="grid-template-columns: repeat(2, 1fr); max-width: 800px; margin: 0 auto;">
+                <div class="summary-item">
+                    <div class="summary-label">Total Tickets Resueltos</div>
+                    <div class="summary-value" style="font-size: 2.5em;">{{ grand_total.total_tickets }}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Promedio Global Resolución</div>
+                    <div class="summary-value" style="font-size: 2.5em;">{{ format_timedelta(grand_total.avg_duration)
+                        }}</div>
+                </div>
+            </div>
+        </div>
+
+        {% for report in reports %}
+        <div class="report-card annual-report-card">
+            <h2>{{ report.title }}</h2>
+
+            {% if not report.has_data %}
+            <p class="no-data">No se encontraron datos para este año.</p>
+            {% else %}
+            <!-- Resumen Anual -->
+            <div class="annual-summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">Total Tickets</div>
+                    <div class="summary-value">{{ report.total_tickets }}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Promedio Resolución</div>
+                    <div class="summary-value">{{ format_timedelta(report.avg_duration) }}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Cumplimiento SLA</div>
+                    <div class="summary-value" style="color: {{ report.sla_color }};">
+                        {{ "%.1f"|format(report.sla_percentage) }}%
+                    </div>
+                    <div style="font-size: 0.8em; color: #6c757d; margin-top: 4px;">
+                        {{ report.sla_met_count }} de {{ report.total_sla_tickets }} tickets
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="charts-section">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h4>Evolución Mensual</h4>
+                        <canvas id="monthlyChart-{{ loop.index0 }}"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Distribución por Prioridad</h4>
+                        <canvas id="priorityChart-{{ loop.index0 }}"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desglose Mensual (Tabla) -->
+            <div class="stats-section">
+                <h3><i class="fas fa-calendar-alt"></i> Detalle Mensual</h3>
+                <div class="table-responsive">
+                    <table class="annual-table">
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th>Tickets</th>
+                                <th>Promedio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report.monthly_breakdown %}
+                            <tr>
+                                <td>{{ item.month }}</td>
+                                <td>{{ item.count }}</td>
+                                <td>{{ format_timedelta(item.avg_duration) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Datos para JavaScript de forma segura -->
+    <script id="reports-data" type="application/json">
+        {{ reports_js | tojson }}
+    </script>
+
+    <script>
+        // Registrar plugin de datalabels
+        Chart.register(ChartDataLabels);
+
+        // Obtener datos del script JSON
+        const reportsData = JSON.parse(document.getElementById('reports-data').textContent);
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // PDF Generation
+            document.getElementById('download-pdf-btn').addEventListener('click', function () {
+                const element = document.getElementById('report-content');
+
+                // Opciones simplificadas para debug
+                const opt = {
+                    margin: 5,
+                    filename: 'Reporte_Anual_{{ current_year }}.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, logging: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                // Usar html2pdf directamente sin clases extra ni scroll complejo por ahora
+                html2pdf().set(opt).from(element).save();
+            });
+
+            reportsData.forEach((report, index) => {
+                if (!report.has_data) return;
+
+                // Gráfico Mensual
+                const ctxMonthly = document.getElementById(`monthlyChart-${index}`).getContext('2d');
+                const monthlyLabels = report.monthly_breakdown.map(item => item.month.split(' ')[0]); // Solo nombre del mes
+                const monthlyCounts = report.monthly_breakdown.map(item => item.count);
+
+                new Chart(ctxMonthly, {
+                    type: 'bar',
+                    data: {
+                        labels: monthlyLabels,
+                        datasets: [{
+                            label: 'Tickets Resueltos',
+                            data: monthlyCounts,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        animation: false, // Desactivar animaciones para asegurar renderizado PDF
+                        scales: {
+                            y: { beginAtZero: true }
+                        },
+                        plugins: {
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'top',
+                                formatter: Math.round,
+                                font: { weight: 'bold' }
+                            }
+                        }
+                    }
+                });
+
+                // Gráfico Prioridad
+                if (report.priority_breakdown) {
+                    const ctxPriority = document.getElementById(`priorityChart-${index}`).getContext('2d');
+                    const priorityLabels = report.priority_breakdown.map(item => `P${item.priority}`);
+                    const priorityCounts = report.priority_breakdown.map(item => item.count);
+                    const priorityColors = ['#ff6384', '#ff9f40', '#ffcd56', '#4bc0c0']; // Colores para P1-P4
+
+                    new Chart(ctxPriority, {
+                        type: 'doughnut',
+                        data: {
+                            labels: priorityLabels,
+                            datasets: [{
+                                data: priorityCounts,
+                                backgroundColor: priorityColors
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            animation: false, // Desactivar animaciones para asegurar renderizado PDF
+                            plugins: {
+                                legend: { position: 'bottom' },
+                                datalabels: {
+                                    color: '#fff',
+                                    font: { weight: 'bold' },
+                                    formatter: (value, ctx) => {
+                                        let sum = 0;
+                                        let dataArr = ctx.chart.data.datasets[0].data;
+                                        dataArr.map(data => { sum += data; });
+                                        let percentage = (value * 100 / sum).toFixed(1) + "%";
+                                        return percentage;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
