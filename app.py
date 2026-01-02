@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_file
+from flask import Flask, render_template, send_file, request
 import requests
 import base64
 from datetime import datetime, timedelta, time
@@ -27,7 +27,7 @@ ORG_URL = "https://dev.azure.com/Grupo-Disbyte"
 PROJECT_NAME = "Disbyte Infrastructure"
 PAT = os.getenv("PAT")   
 USERS_TO_QUERY = ["Stefano Sanchez", "Geleser Pimentel"]
-START_DATE = "2025-03-25"
+START_DATE = f"{datetime.now().year}-01-01"
 API_VERSION_WIQL = "7.1-preview.2"
 API_VERSION_BATCH = "7.1-preview.1"
 meses_es = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
@@ -39,9 +39,14 @@ WORK_END_HOUR = 19
 BUSINESS_DAYS = {0, 1, 2, 3, 4}  # 0 = Lunes ... 6 = Domingo
 
 # --- LÓGICA DE DATOS ---
-def get_done_tickets_by_month(user_list, start_date=None):
+def get_done_tickets_by_month(user_list, start_date=None, end_date=None):
     if start_date is None:
         start_date = START_DATE
+    
+    date_condition = f"[System.CreatedDate] >= '{start_date}T00:00:00Z'"
+    if end_date:
+        date_condition += f" AND [System.CreatedDate] <= '{end_date}T23:59:59Z'"
+
     try:
         assigned_to_conditions = [f"[System.AssignedTo] = '{user}'" for user in user_list]
         assigned_to_clause = " OR ".join(assigned_to_conditions)
@@ -49,7 +54,7 @@ def get_done_tickets_by_month(user_list, start_date=None):
         query = {"query": f"""
                 SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = @project
                 AND [System.WorkItemType] = 'Issue' AND [System.State] = 'Done'
-                AND [System.CreatedDate] >= '{start_date}T00:00:00Z' AND ({assigned_to_clause})
+                AND {date_condition} AND ({assigned_to_clause})
                 ORDER BY [Microsoft.VSTS.Common.StateChangeDate] DESC """}
         authorization = str(base64.b64encode(bytes(':' + PAT, 'ascii')), 'ascii')
         headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + authorization}
@@ -560,33 +565,6 @@ def dashboard():
                     month_data["median_duration"] = None
                 monthly_breakdown.append(month_data)
             
-            # Verificar si estamos en enero y agregar diciembre del año anterior para comparación
-            current_month = datetime.now().month
-            current_year = datetime.now().year
-            
-            # Si estamos en enero, buscar diciembre del año anterior y agregarlo al final
-            if current_month == 1:
-                december_prev_year = f"DICIEMBRE {current_year - 1}"
-                december_data = results.get(december_prev_year, 0)
-                december_durations = monthly_durations.get(december_prev_year, [])
-                
-                # Solo agregar si hay datos de diciembre del año anterior
-                if december_data > 0:
-                    december_month_data = {
-                        "month": december_prev_year, 
-                        "count": december_data,
-                        "is_previous_year": True  # Marca especial para identificar que es del año anterior
-                    }
-                    if december_durations:
-                        december_month_data["avg_duration"] = sum(december_durations, timedelta()) / len(december_durations)
-                        december_month_data["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in december_durations]))
-                    else:
-                        december_month_data["avg_duration"] = None
-                        december_month_data["median_duration"] = None
-                    
-                    # Agregar diciembre del año anterior al final de la lista
-                    monthly_breakdown.append(december_month_data)
-
             # Calcular el total de tickets
             total_tickets = sum(item["count"] for item in monthly_breakdown)
             report["total_tickets"] = total_tickets
@@ -887,20 +865,21 @@ def get_sla_warning_limit(priority):
 
 @app.route('/annual-report')
 def annual_report():
-    """Genera el reporte anual con fecha de inicio 01/01 del año actual"""
-    current_year = datetime.now().year
-    annual_start_date = f"{current_year}-01-01"
-    print(f"Generando reporte anual desde {annual_start_date}...")
+    """Genera el reporte anual para el año seleccionado o el actual"""
+    selected_year = request.args.get('year', default=datetime.now().year, type=int)
+    annual_start_date = f"{selected_year}-01-01"
+    annual_end_date = f"{selected_year}-12-31"
+    print(f"Generando reporte anual para {selected_year} (desde {annual_start_date} hasta {annual_end_date})...")
     
     reports_data = []
     # Solo Geleser y Stefano para el reporte anual
     report_definitions = [
-        {"title": "REPORTE ANUAL: Geleser Pimentel", "users": ["Geleser Pimentel"]},
-        {"title": "REPORTE ANUAL: Stefano Sanchez", "users": ["Stefano Sanchez"]}
+        {"title": f"REPORTE ANUAL {selected_year}: Geleser Pimentel", "users": ["Geleser Pimentel"]},
+        {"title": f"REPORTE ANUAL {selected_year}: Stefano Sanchez", "users": ["Stefano Sanchez"]}
     ]
 
     for definition in report_definitions:
-        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"], start_date=annual_start_date)
+        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"], start_date=annual_start_date, end_date=annual_end_date)
         
         report = {"title": definition["title"], "has_data": False}
         
@@ -991,6 +970,9 @@ def annual_report():
         "total_tickets": grand_total_tickets,
         "avg_duration": grand_total_avg_duration
     }
+    
+    # Lista de años para el selector (desde 2025 hasta el año actual)
+    available_years = list(range(2025, datetime.now().year + 1))
 
     # Crear versión serializable para JavaScript (gráficos)
     reports_data_js = []
@@ -1040,26 +1022,28 @@ def annual_report():
                           grand_total=grand_total_data,
                           format_timedelta=format_timedelta, 
                           START_DATE=annual_start_date,
-                          current_year=current_year)
+                          current_year=selected_year,
+                          available_years=available_years)
 
-@app.route('/export-annual-pdf')
+
+@app.route('/annual-report-pdf')
 def export_annual_pdf():
-    """Exporta el reporte anual como PDF"""
-    current_year = datetime.now().year
-    annual_start_date = f"{current_year}-01-01"
-    print(f"Generando PDF anual desde {annual_start_date}...")
+    """Exporta el reporte anual como PDF para el año seleccionado"""
+    selected_year = request.args.get('year', default=datetime.now().year, type=int)
+    annual_start_date = f"{selected_year}-01-01"
+    annual_end_date = f"{selected_year}-12-31"
+    print(f"Exportando PDF reporte anual para {selected_year}...")
     
     reports_data = []
     report_definitions = [
-        {"title": "REPORTE ANUAL: Geleser Pimentel", "users": ["Geleser Pimentel"]},
-        {"title": "REPORTE ANUAL: Stefano Sanchez", "users": ["Stefano Sanchez"]}
+        {"title": f"REPORTE ANUAL {selected_year}: Geleser Pimentel", "users": ["Geleser Pimentel"]},
+        {"title": f"REPORTE ANUAL {selected_year}: Stefano Sanchez", "users": ["Stefano Sanchez"]}
     ]
 
     for definition in report_definitions:
-        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"], start_date=annual_start_date)
+        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"], start_date=annual_start_date, end_date=annual_end_date)
         
         report = {"title": definition["title"], "has_data": False}
-        
         if results:
             report["has_data"] = True
             monthly_breakdown = []
@@ -1082,26 +1066,20 @@ def export_annual_pdf():
             if details:
                 durations = [d['duration'] for d in details]
                 report["avg_duration"] = sum(durations, timedelta()) / len(durations) if durations else timedelta(0)
+                report["median_duration"] = timedelta(seconds=statistics.median([td.total_seconds() for td in durations]))
                 
                 priority_breakdown = []
                 for p in [1, 2, 3, 4]:
                     count_p = priority_counts.get(p, 0)
                     durations_p = priority_durations.get(p, [])
                     avg_p = (sum(durations_p, timedelta()) / len(durations_p)) if durations_p else None
-                    priority_breakdown.append({
-                        'priority': p,
-                        'count': count_p,
-                        'avg_duration': avg_p
-                    })
+                    priority_breakdown.append({'priority': p, 'count': count_p, 'avg_duration': avg_p})
                 report['priority_breakdown'] = priority_breakdown
-        
+
         reports_data.append(report)
     
-    # Usar una nueva función para el PDF anual o adaptar la existente
-    # Por ahora usaremos la existente pero podríamos crear generate_annual_pdf_report si necesitamos un diseño muy diferente
-    pdf_buffer = generate_pdf_report(reports_data) 
-    
-    filename = f"reporte_anual_{current_year}.pdf"
+    pdf_buffer = generate_pdf_report(reports_data)
+    filename = f"reporte_anual_{selected_year}_soporte.pdf"
     
     return send_file(
         pdf_buffer,

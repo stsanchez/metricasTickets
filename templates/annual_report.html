@@ -20,13 +20,24 @@
     <header>
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo Empresa" class="header-logo">
         <div class="header-text">
-            <h1>Reporte Anual {{ current_year }}</h1>
-            <p>Resumen de métricas y desempeño desde el {{ START_DATE }}</p>
+            <h1>Reporte Anual</h1>
+            <div class="year-selector-container">
+                <label for="year-select">Seleccionar Año: </label>
+                <select id="year-select" class="year-select">
+                    {% for year in available_years %}
+                    <option value="{{ year }}" {% if year==current_year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <p>Resumen de métricas y desempeño para el año {{ current_year }}</p>
             <div class="download-buttons">
                 <a href="{{ url_for('dashboard') }}" class="download-btn" style="background-color: #6c757d;"><i
                         class="fas fa-arrow-left"></i> Volver</a>
                 <button id="download-pdf-btn" class="download-btn pdf"><i class="fas fa-file-pdf"></i>
-                    Descargar Reporte PDF</button>
+                    Descargar reporte PDF (HTML)</button>
+                <a href="{{ url_for('export_annual_pdf', year=current_year) }}" class="download-btn pdf"
+                    style="background-color: #dc3545;"><i class="fas fa-file-pdf"></i>
+                    Descargar reporte PDF (WIQL)</a>
             </div>
         </div>
     </header>
@@ -133,6 +144,15 @@
         const reportsData = JSON.parse(document.getElementById('reports-data').textContent);
 
         document.addEventListener('DOMContentLoaded', function () {
+            // Manejador del selector de año
+            const yearSelect = document.getElementById('year-select');
+            if (yearSelect) {
+                yearSelect.addEventListener('change', function () {
+                    const selectedYear = this.value;
+                    window.location.href = `{{ url_for('annual_report') }}?year=${selectedYear}`;
+                });
+            }
+
             // PDF Generation
             document.getElementById('download-pdf-btn').addEventListener('click', function () {
                 const element = document.getElementById('report-content');

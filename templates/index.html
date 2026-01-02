@@ -20,7 +20,7 @@
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo Empresa" class="header-logo">
         <div class="header-text">
             <h1>Dashboard de Métricas de Soporte</h1>
-            <p>Reportes generados para 'Issues' creados desde el {{ START_DATE }}</p>
+            <p>Reportes generados para 'Issues' creados este año (desde el {{ START_DATE }})</p>
             <div class="download-buttons">
                 <a href="{{ url_for('annual_report') }}" class="download-btn" style="background-color: #17a2b8;"><i
                         class="fas fa-chart-line"></i> Reporte Anual</a>
