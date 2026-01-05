@@ -43,9 +43,18 @@ def get_done_tickets_by_month(user_list, start_date=None, end_date=None):
     if start_date is None:
         start_date = START_DATE
     
-    date_condition = f"[System.CreatedDate] >= '{start_date}T00:00:00Z'"
+    # Ajuste de fechas para WIQL (solo fecha, sin hora, como pide la API para StateChangeDate)
+    # Para incluir todo el día de end_date, usamos < (end_date + 1 día)
+    date_condition = f"[Microsoft.VSTS.Common.StateChangeDate] >= '{start_date}'"
     if end_date:
-        date_condition += f" AND [System.CreatedDate] <= '{end_date}T23:59:59Z'"
+        try:
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            next_day_dt = end_dt + timedelta(days=1)
+            next_day_str = next_day_dt.strftime("%Y-%m-%d")
+            date_condition += f" AND [Microsoft.VSTS.Common.StateChangeDate] < '{next_day_str}'"
+        except ValueError:
+            # Fallback por si el formato no es YYYY-MM-DD
+            date_condition += f" AND [Microsoft.VSTS.Common.StateChangeDate] <= '{end_date}'"
 
     try:
         assigned_to_conditions = [f"[System.AssignedTo] = '{user}'" for user in user_list]
