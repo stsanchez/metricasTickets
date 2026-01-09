@@ -939,6 +939,10 @@ def annual_report():
     grand_total_avg_duration = timedelta(0)
     total_duration_sum = timedelta(0)
     total_tickets_count = 0
+    
+    # Variables for Grand Total SLA
+    grand_total_sla_met = 0
+    grand_total_sla_tickets_count = 0
 
     for report in reports_data:
         if report.get("has_data"):
@@ -971,13 +975,30 @@ def annual_report():
                 report["sla_color"] = "#f59e0b" # Yellow
             else:
                 report["sla_color"] = "#ef4444" # Red
+                
+            # Accumulate for Grand Total SLA
+            grand_total_sla_met += sla_met_count
+            grand_total_sla_tickets_count += total_sla_tickets
 
     if total_tickets_count > 0:
         grand_total_avg_duration = total_duration_sum / total_tickets_count
+        
+    # Calculate Grand Total SLA Percentage and Color
+    grand_total_sla_percentage = (grand_total_sla_met / grand_total_sla_tickets_count * 100) if grand_total_sla_tickets_count > 0 else 0
+    
+    grand_total_sla_color = "#ef4444" # Default Red
+    if grand_total_sla_percentage >= 70:
+        grand_total_sla_color = "#22c55e" # Green
+    elif grand_total_sla_percentage >= 60:
+        grand_total_sla_color = "#f59e0b" # Yellow
 
     grand_total_data = {
         "total_tickets": grand_total_tickets,
-        "avg_duration": grand_total_avg_duration
+        "avg_duration": grand_total_avg_duration,
+        "sla_met_count": grand_total_sla_met,
+        "total_sla_tickets": grand_total_sla_tickets_count,
+        "sla_percentage": grand_total_sla_percentage,
+        "sla_color": grand_total_sla_color
     }
     
     # Lista de años para el selector (desde 2025 hasta el año actual)

@@ -47,7 +47,7 @@
         <div class="report-card annual-report-card" style="flex: 1 1 100%; max-width: 100%; border-top-color: #012f60;">
             <h2 style="text-align: center; font-size: 1.8em; color: #012f60;">RESUMEN GLOBAL {{ current_year }}</h2>
             <div class="annual-summary-grid"
-                style="grid-template-columns: repeat(2, 1fr); max-width: 800px; margin: 0 auto;">
+                style="grid-template-columns: repeat(3, 1fr); max-width: 1000px; margin: 0 auto;">
                 <div class="summary-item">
                     <div class="summary-label">Total Tickets Resueltos</div>
                     <div class="summary-value" style="font-size: 2.5em;">{{ grand_total.total_tickets }}</div>
@@ -56,6 +56,15 @@
                     <div class="summary-label">Promedio Global Resolución</div>
                     <div class="summary-value" style="font-size: 2.5em;">{{ format_timedelta(grand_total.avg_duration)
                         }}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Cumplimiento SLA Global</div>
+                    <div class="summary-value" style="font-size: 2.5em; color: {{ grand_total.sla_color }};">
+                        {{ "%.1f"|format(grand_total.sla_percentage) }}%
+                    </div>
+                    <div style="font-size: 0.9em; color: #6c757d; margin-top: 4px;">
+                        {{ grand_total.sla_met_count }} de {{ grand_total.total_sla_tickets }} tickets
+                    </div>
                 </div>
             </div>
         </div>
