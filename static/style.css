@@ -881,6 +881,7 @@ header {
     border-radius: 4px;
     padding: 4px 8px;
     font-size: 0.8em;
+    white-space: nowrap;
 }
 
 .sla-criteria-compact strong {
