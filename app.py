@@ -15,9 +15,9 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import io
 from zoneinfo import ZoneInfo
+import time
 
 load_dotenv()
-PAT = os.getenv("PAT")
 
 
 # --- CONFIGURACIÓN ---
@@ -25,7 +25,7 @@ PAT = os.getenv("PAT")
 
 ORG_URL = "https://dev.azure.com/Grupo-Disbyte"
 PROJECT_NAME = "Disbyte Infrastructure"
-PAT = os.getenv("PAT")   
+PAT = os.getenv("PAT")
 USERS_TO_QUERY = ["Stefano Sanchez", "Geleser Pimentel"]
 START_DATE = f"{datetime.now().year}-01-01"
 API_VERSION_WIQL = "7.1-preview.2"
@@ -37,6 +37,21 @@ TIMEZONE = os.getenv("TIMEZONE", "UTC")
 WORK_START_HOUR = 8
 WORK_END_HOUR = 19
 BUSINESS_DAYS = {0, 1, 2, 3, 4}  # 0 = Lunes ... 6 = Domingo
+
+# === CACÉ TTL para llamadas a Azure DevOps ===
+_api_cache = {}
+CACHE_TTL_SECONDS = 300  # 5 minutos
+
+def _get_cached_tickets(users_tuple, start_date, end_date=None):
+    """Wrapper con caché TTL para get_done_tickets_by_month."""
+    key = (users_tuple, start_date, end_date)
+    now = time.time()
+    if key in _api_cache and now - _api_cache[key]['ts'] < CACHE_TTL_SECONDS:
+        print(f"⚡ Cache hit para {users_tuple}")
+        return _api_cache[key]['data']
+    data = get_done_tickets_by_month(list(users_tuple), start_date, end_date)
+    _api_cache[key] = {'data': data, 'ts': now}
+    return data
 
 # --- LÓGICA DE DATOS ---
 def get_done_tickets_by_month(user_list, start_date=None, end_date=None):
@@ -550,8 +565,52 @@ def dashboard():
         {"title": "REPORTE COMBINADO", "users": USERS_TO_QUERY}
     ]
 
+    # 1. Obtener datos individuales (con caché)
+    individual_results = {}
+    for definition in report_definitions[:2]:  # Solo los individuales
+        key = tuple(definition["users"])
+        individual_results[key] = _get_cached_tickets(
+            key, START_DATE
+        )
+
     for definition in report_definitions:
-        results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = get_done_tickets_by_month(definition["users"])
+        users_key = tuple(definition["users"])
+
+        if definition["title"] == "REPORTE COMBINADO":
+            # Combinar los datos ya obtenidos sin nueva llamada a la API
+            r0 = individual_results.get(tuple(report_definitions[0]["users"]), ({}, [], {}, {}, {}, {}, {}, {}, {}))
+            r1 = individual_results.get(tuple(report_definitions[1]["users"]), ({}, [], {}, {}, {}, {}, {}, {}, {}))
+            results = {**r0[0], **r1[0]}
+            for k, v in r1[0].items():
+                results[k] = results.get(k, 0) + v
+            details = r0[1] + r1[1]
+            monthly_durations = {**r0[2]}
+            for k, v in r1[2].items():
+                monthly_durations[k] = monthly_durations.get(k, []) + v
+            monthly_ticket_details = {**r0[3]}
+            for k, v in r1[3].items():
+                monthly_ticket_details[k] = monthly_ticket_details.get(k, []) + v
+            priority_counts = dict(r0[4])
+            for k, v in r1[4].items():
+                priority_counts[k] = priority_counts.get(k, 0) + v
+            priority_durations = {**r0[5]}
+            for k, v in r1[5].items():
+                priority_durations[k] = priority_durations.get(k, []) + v
+            priority_ticket_details = {**r0[6]}
+            for k, v in r1[6].items():
+                priority_ticket_details[k] = priority_ticket_details.get(k, []) + v
+            monthly_priority_counts = dict(r0[7])
+            for k, v in r1[7].items():
+                for p, c in v.items():
+                    monthly_priority_counts.setdefault(k, {}).setdefault(p, 0)
+                    monthly_priority_counts[k][p] += c
+            monthly_priority_durations = dict(r0[8])
+            for k, v in r1[8].items():
+                for p, d in v.items():
+                    monthly_priority_durations.setdefault(k, {}).setdefault(p, [])
+                    monthly_priority_durations[k][p] += d
+        else:
+            results, details, monthly_durations, monthly_ticket_details, priority_counts, priority_durations, priority_ticket_details, monthly_priority_counts, monthly_priority_durations = individual_results[users_key]
         
         report = {"title": definition["title"], "has_data": False}
         
@@ -632,10 +691,26 @@ def dashboard():
         
         reports_data.append(report)
 
+    # Serializar para JavaScript (gráficos) — convertir timedeltas a segundos
+    reports_data_js = []
+    for r in reports_data:
+        r_js = {'title': r['title'], 'has_data': r.get('has_data', False)}
+        if r_js['has_data']:
+            r_js['monthlyBreakdown'] = [
+                {'month': m['month'], 'count': m['count']}
+                for m in r.get('monthly_breakdown', [])
+            ]
+            r_js['priorityBreakdown'] = [
+                {'priority': p['priority'], 'count': p['count']}
+                for p in r.get('priority_breakdown', [])
+            ]
+        reports_data_js.append(r_js)
+
     # Pasamos la función format_timedelta al template para poder usarla
-    return render_template('index.html', 
-                          reports=reports_data, 
-                          format_timedelta=format_timedelta, 
+    return render_template('index.html',
+                          reports=reports_data,
+                          reports_js=reports_data_js,
+                          format_timedelta=format_timedelta,
                           START_DATE=START_DATE,
                           get_sla_limit=get_sla_limit,
                           get_sla_warning_limit=get_sla_warning_limit)

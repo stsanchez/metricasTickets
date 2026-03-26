@@ -427,42 +427,8 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// === FUNCIONALIDAD DE TEMA ===
-const themeToggle = document.getElementById('theme-toggle');
-const body = document.body;
-
-function toggleTheme() {
-    const currentTheme = body.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    
-    body.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    
-    // Cambiar solo el título del botón
-    if (newTheme === 'dark') {
-        themeToggle.title = 'Cambiar a modo claro';
-    } else {
-        themeToggle.title = 'Cambiar a modo oscuro';
-    }
-}
-
-
-function loadTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    
-    body.setAttribute('data-theme', savedTheme);
-    
-    if (savedTheme === 'dark') {
-        themeToggle.title = 'Cambiar a modo claro';
-    } else {
-        themeToggle.title = 'Cambiar a modo oscuro';
-    }
-}
-
-// Event listener para el botón de tema
-if (themeToggle) {
-    themeToggle.addEventListener('click', toggleTheme);
-}
+// === FUNCIONALIDAD DE TEMA (removido — se usa un solo tema) ===
+// El toggle de tema fue eliminado. No se requiere código aquí.
 
 
 // === FUNCIONALIDAD DE TECLADO ===
@@ -743,33 +709,17 @@ function initializeCharts() {
 }
 
 function extractReportsData() {
-    const reports = [];
-    const reportCards = document.querySelectorAll('.report-card');
-    
-    reportCards.forEach(card => {
-        const title = card.querySelector('h2').textContent;
-        const monthlyBreakdown = [];
-        
-        // Extraer datos del desglose mensual
-        const monthlyItems = card.querySelectorAll('.stats-section ul li');
-        monthlyItems.forEach(item => {
-            const text = item.textContent;
-            const match = text.match(/([A-Z]+ \d{4}):\s*(\d+)\s*Issues/);
-            if (match) {
-                monthlyBreakdown.push({
-                    month: match[1],
-                    count: parseInt(match[2])
-                });
-            }
-        });
-        
-        reports.push({
-            title: title,
-            monthlyBreakdown: monthlyBreakdown
-        });
-    });
-    
-    return reports;
+    // Leer desde el JSON embebido en el HTML por Flask (más confiable que parsear el DOM)
+    const dataEl = document.getElementById('reports-data');
+    if (dataEl) {
+        try {
+            return JSON.parse(dataEl.textContent);
+        } catch (e) {
+            console.error('Error parseando reports-data JSON:', e);
+        }
+    }
+    // Fallback vacío
+    return [];
 }
 
 function createIssuesByMonthChart(data) {
@@ -818,14 +768,14 @@ function createIssuesByMonthChart(data) {
             datasets: [{
                 label: 'Geleser Pimentel',
                 data: geleserData,
-                backgroundColor: 'rgba(30, 58, 138, 0.8)',
-                borderColor: 'rgba(30, 58, 138, 1)',
+                backgroundColor: 'rgba(216, 90, 48, 0.75)',
+                borderColor: 'rgba(216, 90, 48, 1)',
                 borderWidth: 1
             }, {
                 label: 'Stefano Sanchez',
                 data: stefanoData,
-                backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(153, 60, 29, 0.75)',
+                borderColor: 'rgba(153, 60, 29, 1)',
                 borderWidth: 1
             }]
         },
@@ -1007,7 +957,7 @@ function showOutOfSLAModal() {
             li.setAttribute('data-priority', issue.priority);
             
             li.innerHTML = `
-                <strong class="issue-link" data-issue-id="${issue.id}" data-issue-title="${issue.title}" style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #${issue.id}</strong>
+                <strong class="issue-link" data-issue-id="${issue.id}" data-issue-title="${issue.title}" style="cursor: pointer; color: var(--accent-primary); text-decoration: underline;">Issue #${issue.id}</strong>
                 <div class="priority-cell">
                     <span class="priority-badge priority-${issue.priority}">${issue.priority}</span>
                     <span class="sla-badge sla-danger">
@@ -1099,9 +1049,6 @@ function attachIssueLinkListeners(container) {
 
 // === INICIALIZACIÓN ===
 document.addEventListener('DOMContentLoaded', function() {
-    // Cargar el tema al iniciar la página
-    loadTheme();
-    
     // Inicializar gráficos después de un pequeño delay para asegurar que el DOM esté listo
     setTimeout(() => {
         initializeCharts();
