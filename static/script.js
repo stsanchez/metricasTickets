@@ -694,6 +694,11 @@ function showNotification(message, type = 'info') {
 }
 
 // === FUNCIONALIDAD DE GRÁFICOS ===
+// Configuración global para Dark Mode (texto claro)
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = '#B4B2A9';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+}
 let charts = {};
 
 function initializeCharts() {
@@ -830,16 +835,16 @@ function createPriorityDistributionChart(data) {
             datasets: [{
                 data: priorityData,
                 backgroundColor: [
-                    'rgba(220, 38, 38, 0.8)',   // Rojo para prioridad 1
-                    'rgba(245, 158, 11, 0.8)',  // Amarillo para prioridad 2
-                    'rgba(34, 197, 94, 0.8)',   // Verde para prioridad 3
-                    'rgba(59, 130, 246, 0.8)'  // Azul para prioridad 4
+                    'rgba(216, 90, 48, 0.7)',   // Naranja/rojo pastel para prioridad 1
+                    'rgba(224, 169, 75, 0.7)',  // Amarillo ocre para prioridad 2
+                    'rgba(112, 160, 120, 0.7)', // Verde sage para prioridad 3
+                    'rgba(100, 130, 180, 0.7)'  // Azul suave para prioridad 4
                 ],
                 borderColor: [
-                    'rgba(220, 38, 38, 1)',
-                    'rgba(245, 158, 11, 1)',
-                    'rgba(34, 197, 94, 1)',
-                    'rgba(59, 130, 246, 1)'
+                    'rgba(216, 90, 48, 1)',
+                    'rgba(224, 169, 75, 1)',
+                    'rgba(112, 160, 120, 1)',
+                    'rgba(100, 130, 180, 1)'
                 ],
                 borderWidth: 2
             }]

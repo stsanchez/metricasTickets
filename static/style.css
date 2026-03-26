@@ -1,24 +1,24 @@
 /* === Variables CSS — Paleta Claude/Anthropic === */
 :root {
-    --bg-primary: #B8B5AC;
-    --bg-secondary: #C6C3BA;
-    --bg-tertiary: #AEABA2;
-    --text-primary: #2C2C2A;
-    --text-secondary: #5F5E5A;
-    --text-tertiary: #5F5E5A;
-    --text-accent: #2C2C2A;
+    --bg-primary: #1A1917;
+    --bg-secondary: #2C2C2A;
+    --bg-tertiary: #444441;
+    --text-primary: #F1EFE8;
+    --text-secondary: #B4B2A9;
+    --text-tertiary: #888780;
+    --text-accent: #E5E2D9;
     --text-muted: #888780;
-    --border-primary: #D3D1C7;
-    --border-secondary: #D3D1C7;
-    --border-tertiary: #E4E2DA;
-    --shadow-primary: rgba(44, 44, 42, 0.07);
-    --shadow-secondary: rgba(44, 44, 42, 0.16);
+    --border-primary: #444441;
+    --border-secondary: #5F5E5A;
+    --border-tertiary: #444441;
+    --shadow-primary: rgba(0, 0, 0, 0.25);
+    --shadow-secondary: rgba(0, 0, 0, 0.45);
     --accent-primary: #D85A30;
     --accent-secondary: #D85A30;
-    --accent-hover: #993C1D;
-    --accent-soft: #FAECE7;
-    --danger: #c0392b;
-    --modal-overlay: rgba(44, 44, 42, 0.45);
+    --accent-hover: #e3744d;
+    --accent-soft: rgba(216, 90, 48, 0.15);
+    --danger: #e76a6a;
+    --modal-overlay: rgba(0, 0, 0, 0.7);
 }
 
 /* === Estilo General === */
