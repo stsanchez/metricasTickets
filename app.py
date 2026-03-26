@@ -1088,37 +1088,34 @@ def annual_report():
             new_monthly = []
             for m in r_js["monthly_breakdown"]:
                 m_copy = m.copy()
-                if m_copy.get("avg_duration"):
+                # Usar 'is not None' para no saltear timedelta(0) que es falsy
+                if m_copy.get("avg_duration") is not None and isinstance(m_copy["avg_duration"], timedelta):
                     m_copy["avg_duration"] = m_copy["avg_duration"].total_seconds()
-                # Eliminamos median_duration de JS también
                 if "median_duration" in m_copy:
                     del m_copy["median_duration"]
                 new_monthly.append(m_copy)
             r_js["monthly_breakdown"] = new_monthly
-            
+
             # Convertir timedeltas en priority_breakdown
             if r_js.get("priority_breakdown"):
                 new_priority = []
                 for p in r_js["priority_breakdown"]:
                     p_copy = p.copy()
-                    if p_copy.get("avg_duration"):
+                    if p_copy.get("avg_duration") is not None and isinstance(p_copy["avg_duration"], timedelta):
                         p_copy["avg_duration"] = p_copy["avg_duration"].total_seconds()
                     new_priority.append(p_copy)
                 r_js["priority_breakdown"] = new_priority
-            
+
             # Convertir métricas globales
-            if r_js.get("avg_duration"):
+            if r_js.get("avg_duration") is not None and isinstance(r_js["avg_duration"], timedelta):
                 r_js["avg_duration"] = r_js["avg_duration"].total_seconds()
-            # Eliminamos median_duration global
             if "median_duration" in r_js:
                 del r_js["median_duration"]
-                
-            # Eliminar detalles que no se usan en JS y podrían tener objetos complejos
-            if "monthly_details" in r_js:
-                del r_js["monthly_details"]
-            if "priority_details" in r_js:
-                del r_js["priority_details"]
-                
+
+            # Eliminar cualquier objeto complejo que pueda tener timedeltas
+            for key in ["monthly_details", "priority_details", "monthly_priority_breakdown"]:
+                r_js.pop(key, None)
+
         reports_data_js.append(r_js)
 
     return render_template('annual_report.html', 
