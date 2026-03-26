@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -22,7 +22,7 @@
             <h1>Dashboard de Métricas de Soporte</h1>
             <p>Reportes generados para 'Issues' creados este año (desde el {{ START_DATE }})</p>
             <div class="download-buttons">
-                <a href="{{ url_for('annual_report') }}" class="download-btn" style="background-color: #17a2b8;"><i
+                <a href="{{ url_for('annual_report') }}" class="download-btn" style="background-color: var(--accent-primary);"><i
                         class="fas fa-chart-line"></i> Reporte Anual</a>
                 <a href="{{ url_for('export_pdf') }}" class="download-btn pdf"><i class="fas fa-file-pdf"></i> PDF</a>
                 <button id="export-excel" class="download-btn excel"><i class="fas fa-file-excel"></i> Excel</button>
@@ -30,13 +30,7 @@
         </div>
     </header>
 
-    <!-- Botón de Modo Oscuroo -->
-    <div class="dark-mode-toggle">
-        <button class="theme-toggle" id="theme-toggle" title="Cambiar a modo oscuro">
-            <i class="fas fa-moon moon-icon"></i>
-            <i class="fas fa-sun sun-icon"></i>
-        </button>
-    </div>
+    <!-- Botón de Modo Oscuro (removido) -->
 
     <!-- Sección de Gráficos -->
     <div class="charts-section">
@@ -255,7 +249,7 @@
                         <li data-duration="{{ t.duration.total_seconds() }}" data-issue-id="{{ t.id }}"
                             data-priority="{{ t.priority }}">
                             <strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}"
-                                style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id
+                                style="cursor: pointer; color: var(--accent-primary); text-decoration: underline;">Issue #{{ t.id
                                 }}</strong>
                             <div class="priority-cell">
                                 <span class="priority-badge priority-{{ t.priority }}">{{ t.priority }}</span>
@@ -295,7 +289,7 @@
                 <ul class="ticket-list">
                     {% for t in report.priority_details[item.priority] %}
                     <li><strong class="issue-link" data-issue-id="{{ t.id }}" data-issue-title="{{ t.title }}"
-                            style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ t.id
+                            style="cursor: pointer; color: var(--accent-primary); text-decoration: underline;">Issue #{{ t.id
                             }}:</strong> {{ format_timedelta(t.duration) }}</li>
                     {% endfor %}
                 </ul>
@@ -317,7 +311,7 @@
                 <ul class="ticket-list">
                     {% for item in report.top_issues %}
                     <li><strong class="issue-link" data-issue-id="{{ item.id }}" data-issue-title="{{ item.title }}"
-                            style="cursor: pointer; color: #007acc; text-decoration: underline;">Issue #{{ item.id
+                            style="cursor: pointer; color: var(--accent-primary); text-decoration: underline;">Issue #{{ item.id
                             }}:</strong> {{ format_timedelta(item.duration) }}</li>
                     {% endfor %}
                 </ul>

@@ -1,132 +1,29 @@
-/* === Variables CSS para temas === */
+/* === Variables CSS — Paleta Claude/Anthropic === */
 :root {
-    /* Modo claro (por defecto) */
-    --bg-primary: #f8fafc;
-    --bg-secondary: #ffffff;
-    --bg-tertiary: #f9fafb;
-    --text-primary: #2c3e50;
-    --text-secondary: #475569;
-    --text-tertiary: #64748b;
-    --text-accent: #1a365d;
-    --text-muted: #94a3b8;
-    --border-primary: #e2e8f0;
-    --border-secondary: #e5e7eb;
-    --border-tertiary: #f1f5f9;
-    --shadow-primary: rgba(0, 0, 0, 0.06);
-    --shadow-secondary: rgba(0, 0, 0, 0.15);
-    --accent-primary: #1e3a8a;
-    --accent-secondary: #2563eb;
-    --accent-hover: #1d4ed8;
-    --danger: #dc2626;
-    --modal-overlay: rgba(0, 0, 0, 0.45);
-}
-
-/* Modo oscuro */
-[data-theme="dark"] {
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
-    --text-primary: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --text-tertiary: #94a3b8;
-    --text-accent: #60a5fa;
-    --text-muted: #64748b;
-    --border-primary: #475569;
-    --border-secondary: #475569;
-    --border-tertiary: #475569;
-    --shadow-primary: rgba(0, 0, 0, 0.3);
-    --shadow-secondary: rgba(0, 0, 0, 0.5);
-    --accent-primary: #3b82f6;
-    --accent-secondary: #60a5fa;
-    --accent-hover: #2563eb;
-    --danger: #ef4444;
-    --modal-overlay: rgba(0, 0, 0, 0.7);
-}
-
-/* === Botón de Modo Oscuro === */
-.dark-mode-toggle {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    z-index: 1000;
-}
-
-.theme-toggle {
-    position: relative;
-    width: 40px;
-    height: 20px;
-    background: var(--border-primary);
-    border-radius: 20px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    padding: 0;
-}
-
-.theme-toggle::before {
-    content: '';
-    position: absolute;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    background: white;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px var(--shadow-primary);
-}
-
-[data-theme="dark"] .theme-toggle {
-    background: var(--accent-primary);
-}
-
-[data-theme="dark"] .theme-toggle::before {
-    transform: translateX(20px);
-}
-
-.theme-toggle i {
-    position: absolute;
-    font-size: 12px;
-    transition: all 0.3s ease;
-    z-index: 1;
-}
-
-.theme-toggle .moon-icon {
-    left: 8px;
-    color: var(--text-secondary);
-}
-
-.theme-toggle .sun-icon {
-    right: 8px;
-    color: white;
-    opacity: 0;
-}
-
-[data-theme="dark"] .theme-toggle .moon-icon {
-    opacity: 0;
-}
-
-[data-theme="dark"] .theme-toggle .sun-icon {
-    opacity: 1;
-}
-
-.theme-toggle:hover {
-    background: var(--accent-hover);
-    transform: scale(1.1);
-}
-
-.theme-toggle i {
-    transition: transform 0.3s ease;
-}
-
-[data-theme="dark"] .theme-toggle i {
-    transform: rotate(180deg);
+    --bg-primary: #E5E2D9;
+    --bg-secondary: #EDEBE4;
+    --bg-tertiary: #E0DDD6;
+    --text-primary: #2C2C2A;
+    --text-secondary: #5F5E5A;
+    --text-tertiary: #5F5E5A;
+    --text-accent: #2C2C2A;
+    --text-muted: #888780;
+    --border-primary: #D3D1C7;
+    --border-secondary: #D3D1C7;
+    --border-tertiary: #E4E2DA;
+    --shadow-primary: rgba(44, 44, 42, 0.07);
+    --shadow-secondary: rgba(44, 44, 42, 0.16);
+    --accent-primary: #D85A30;
+    --accent-secondary: #D85A30;
+    --accent-hover: #993C1D;
+    --accent-soft: #FAECE7;
+    --danger: #c0392b;
+    --modal-overlay: rgba(44, 44, 42, 0.45);
 }
 
 /* === Estilo General === */
 body {
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Inter', 'Roboto', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     margin: 0;
@@ -198,13 +95,13 @@ header {
 }
 
 .year-select:hover {
-    border-color: var(--accent-secondary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(216, 90, 48, 0.12);
 }
 
 .year-select:focus {
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+    border-color: var(--accent-hover);
+    box-shadow: 0 0 0 3px rgba(216, 90, 48, 0.18);
 }
 
 .download-buttons {
@@ -1003,7 +900,7 @@ header {
 .sla-view-icon:hover {
     background: var(--accent-hover);
     transform: scale(1.1);
-    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+    box-shadow: 0 2px 8px rgba(216, 90, 48, 0.3);
 }
 
 .sla-view-btn {
@@ -1027,7 +924,7 @@ header {
 .sla-view-btn:hover {
     background: var(--accent-hover);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.3);
+    box-shadow: 0 2px 8px rgba(216, 90, 48, 0.3);
 }
 
 .sla-view-btn i {
@@ -1417,8 +1314,7 @@ header {
 
 /* Estilos para el Reporte Anual */
 .annual-report-card {
-    border-top: 5px solid #17a2b8;
-    /* Color distintivo para reporte anual */
+    border-top: 5px solid var(--accent-primary);
 }
 
 .annual-summary-grid {
@@ -1430,15 +1326,16 @@ header {
 }
 
 .summary-item {
-    background-color: #f8f9fa;
+    background-color: var(--bg-tertiary);
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-primary);
+    box-shadow: 0 2px 4px var(--shadow-primary);
 }
 
 .summary-label {
     font-size: 0.9em;
-    color: #6c757d;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 5px;
@@ -1447,7 +1344,7 @@ header {
 .summary-value {
     font-size: 1.8em;
     font-weight: bold;
-    color: #012f60;
+    color: var(--accent-primary);
 }
 
 .annual-table {
@@ -1460,17 +1357,17 @@ header {
 .annual-table td {
     padding: 12px 15px;
     text-align: left;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--border-primary);
 }
 
 .annual-table th {
-    background-color: #012f60;
+    background-color: var(--accent-primary);
     color: white;
     font-weight: 600;
 }
 
 .annual-table tr:hover {
-    background-color: #f1f1f1;
+    background-color: var(--accent-soft);
 }
 
 .table-responsive {

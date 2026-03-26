@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -31,7 +31,7 @@
             </div>
             <p>Resumen de métricas y desempeño para el año {{ current_year }}</p>
             <div class="download-buttons">
-                <a href="{{ url_for('dashboard') }}" class="download-btn" style="background-color: #6c757d;"><i
+                <a href="{{ url_for('dashboard') }}" class="download-btn" style="background-color: #888780;"><i
                         class="fas fa-arrow-left"></i> Volver</a>
                 <button id="download-pdf-btn" class="download-btn pdf"><i class="fas fa-file-pdf"></i>
                     Descargar reporte PDF (HTML)</button>
@@ -44,8 +44,8 @@
 
     <div class="container" id="report-content">
         <!-- Grand Total Section -->
-        <div class="report-card annual-report-card" style="flex: 1 1 100%; max-width: 100%; border-top-color: #012f60;">
-            <h2 style="text-align: center; font-size: 1.8em; color: #012f60;">RESUMEN GLOBAL {{ current_year }}</h2>
+        <div class="report-card annual-report-card" style="flex: 1 1 100%; max-width: 100%; border-top-color: var(--accent-primary);">
+            <h2 style="text-align: center; font-size: 1.8em; color: var(--text-accent);">RESUMEN GLOBAL {{ current_year }}</h2>
             <div class="annual-summary-grid"
                 style="grid-template-columns: repeat(3, 1fr); max-width: 1000px; margin: 0 auto;">
                 <div class="summary-item">
@@ -62,7 +62,7 @@
                     <div class="summary-value" style="font-size: 2.5em; color: {{ grand_total.sla_color }};">
                         {{ "%.1f"|format(grand_total.sla_percentage) }}%
                     </div>
-                    <div style="font-size: 0.9em; color: #6c757d; margin-top: 4px;">
+                    <div style="font-size: 0.9em; color: var(--text-muted); margin-top: 4px;">
                         {{ grand_total.sla_met_count }} de {{ grand_total.total_sla_tickets }} tickets
                     </div>
                 </div>
@@ -91,7 +91,7 @@
                     <div class="summary-value" style="color: {{ report.sla_color }};">
                         {{ "%.1f"|format(report.sla_percentage) }}%
                     </div>
-                    <div style="font-size: 0.8em; color: #6c757d; margin-top: 4px;">
+                    <div style="font-size: 0.8em; color: var(--text-muted); margin-top: 4px;">
                         {{ report.sla_met_count }} de {{ report.total_sla_tickets }} tickets
                     </div>
                 </div>
@@ -194,8 +194,8 @@
                         datasets: [{
                             label: 'Tickets Resueltos',
                             data: monthlyCounts,
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(216, 90, 48, 0.55)',
+                            borderColor: 'rgba(216, 90, 48, 1)',
                             borderWidth: 1
                         }]
                     },
@@ -221,7 +221,7 @@
                     const ctxPriority = document.getElementById(`priorityChart-${index}`).getContext('2d');
                     const priorityLabels = report.priority_breakdown.map(item => `P${item.priority}`);
                     const priorityCounts = report.priority_breakdown.map(item => item.count);
-                    const priorityColors = ['#ff6384', '#ff9f40', '#ffcd56', '#4bc0c0']; // Colores para P1-P4
+                    const priorityColors = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6']; // P1=rojo, P2=amarillo, P3=verde, P4=azul
 
                     new Chart(ctxPriority, {
                         type: 'doughnut',
