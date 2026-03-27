@@ -496,23 +496,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const applyBtn = document.getElementById('apply-filters');
     const clearBtn = document.getElementById('clear-filters');
     
+    // Filtros no implementados actualmente
+    /*
     if (applyBtn) {
         applyBtn.addEventListener('click', applyFilters);
     }
-    
-    if (clearBtn) {
-        clearBtn.addEventListener('click', clearFilters);
-    }
-    
-    // Aplicar filtros al presionar Enter en los inputs
-    const filterInputs = document.querySelectorAll('.filter-input, .filter-select');
-    filterInputs.forEach(input => {
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                applyFilters();
-            }
-        });
-    });
+    ...
+    */
     
     // Búsqueda en tiempo real
     const searchInput = document.getElementById('search-issues');
@@ -875,7 +865,7 @@ function createPriorityDistributionChart(data) {
 
 // === CÁLCULO DE MÉTRICAS REALES DE SLA ===
 function calculateRealSLAMetrics() {
-    const allIssues = document.querySelectorAll('.ticket-list li');
+    const allIssues = document.querySelectorAll('.ticket-list:not(#out-of-sla-list) li');
     let totalIssues = 0;
     let inSLA = 0;
     let outOfSLA = 0;
@@ -883,8 +873,7 @@ function calculateRealSLAMetrics() {
     allIssues.forEach(issue => {
         const duration = parseFloat(issue.getAttribute('data-duration'));
         const priority = parseInt(issue.getAttribute('data-priority'));
-        
-        if (duration && priority) {
+        if (!isNaN(duration) && !isNaN(priority)) {
             totalIssues++;
             
             // Calcular límites según prioridad
@@ -989,7 +978,7 @@ function showOutOfSLAModal() {
 
 
 function getOutOfSLAIssues() {
-    const allIssues = document.querySelectorAll('.ticket-list li');
+    const allIssues = document.querySelectorAll('.ticket-list:not(#out-of-sla-list) li');
     const outOfSLAIssues = [];
     
     allIssues.forEach(issue => {
@@ -998,7 +987,7 @@ function getOutOfSLAIssues() {
         const issueId = issue.getAttribute('data-issue-id');
         const issueTitle = issue.querySelector('.issue-link')?.getAttribute('data-issue-title') || `Issue #${issueId}`;
         
-        if (duration && priority && issueId) {
+        if (!isNaN(duration) && !isNaN(priority) && issueId) {
             const slaLimit = getSLALimit(priority);
             
             // Si excede el límite de SLA, agregarlo a la lista
@@ -1058,7 +1047,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         initializeCharts();
         calculateRealSLAMetrics();
-        showAllReports(); // Mostrar todos los reportes inicialmente
     }, 500);
     
     console.log('Dashboard de Métricas de Soporte IT - JavaScript cargado');

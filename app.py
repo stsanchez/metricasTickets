@@ -580,7 +580,7 @@ def dashboard():
             # Combinar los datos ya obtenidos sin nueva llamada a la API
             r0 = individual_results.get(tuple(report_definitions[0]["users"]), ({}, [], {}, {}, {}, {}, {}, {}, {}))
             r1 = individual_results.get(tuple(report_definitions[1]["users"]), ({}, [], {}, {}, {}, {}, {}, {}, {}))
-            results = {**r0[0], **r1[0]}
+            results = dict(r0[0])
             for k, v in r1[0].items():
                 results[k] = results.get(k, 0) + v
             details = r0[1] + r1[1]
