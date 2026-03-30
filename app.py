@@ -15,7 +15,7 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import io
 from zoneinfo import ZoneInfo
-import time
+import time as time_module
 
 load_dotenv()
 
@@ -45,7 +45,7 @@ CACHE_TTL_SECONDS = 300  # 5 minutos
 def _get_cached_tickets(users_tuple, start_date, end_date=None):
     """Wrapper con caché TTL para get_done_tickets_by_month."""
     key = (users_tuple, start_date, end_date)
-    now = time.time()
+    now = time_module.time()
     if key in _api_cache and now - _api_cache[key]['ts'] < CACHE_TTL_SECONDS:
         print(f"⚡ Cache hit para {users_tuple}")
         return _api_cache[key]['data']
