@@ -53,14 +53,14 @@ def _get_cached_tickets(users_tuple, start_date, end_date=None):
     _api_cache[key] = {'data': data, 'ts': now}
     return data
 
-def _get_cached_near_sla(users_tuple):
+def _get_cached_near_sla():
     """Wrapper con caché TTL para get_active_tickets_near_sla."""
-    key = ('near_sla', users_tuple)
+    key = 'near_sla'
     now = time_module.time()
     if key in _api_cache and now - _api_cache[key]['ts'] < CACHE_TTL_SECONDS:
-        print(f"⚡ Cache hit near_sla para {users_tuple}")
+        print(f"⚡ Cache hit near_sla")
         return _api_cache[key]['data']
-    data = get_active_tickets_near_sla(list(users_tuple))
+    data = get_active_tickets_near_sla()
     _api_cache[key] = {'data': data, 'ts': now}
     return data
 
@@ -717,7 +717,7 @@ def dashboard():
             ]
         reports_data_js.append(r_js)
 
-    near_sla_tickets = _get_cached_near_sla(tuple(USERS_TO_QUERY))
+    near_sla_tickets = _get_cached_near_sla()
 
     # Pasamos la función format_timedelta al template para poder usarla
     return render_template('index.html',
@@ -960,23 +960,20 @@ def get_sla_warning_limit(priority):
     }
     return warning_limits.get(priority, 1 * 24 * 3600)  # Default: 1 día
 
-def get_active_tickets_near_sla(user_list):
+def get_active_tickets_near_sla():
     """Obtiene tickets activos (no Done) que están próximos a vencer su SLA.
     Alerta P1/P2 cuando queda < 1 hora, P3/P4 cuando queda < 1 día."""
     try:
-        assigned_to_conditions = [f"[System.AssignedTo] = '{user}'" for user in user_list]
-        assigned_to_clause = " OR ".join(assigned_to_conditions)
         wiql_url = f"{ORG_URL}/{PROJECT_NAME}/_apis/wit/wiql?api-version={API_VERSION_WIQL}"
         query = {"query": f"""
             SELECT [System.Id] FROM workitems
             WHERE [System.TeamProject] = @project
             AND [System.WorkItemType] = 'Issue'
             AND [System.State] <> 'Done'
-            AND ({assigned_to_clause})
             ORDER BY [System.CreatedDate] ASC"""}
         authorization = str(base64.b64encode(bytes(':' + PAT, 'ascii')), 'ascii')
         headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + authorization}
-        print(f"🔍 Buscando tickets activos próximos a vencer SLA para: {', '.join(user_list)}...")
+        print(f"🔍 Buscando todos los tickets activos próximos a vencer SLA...")
         response = requests.post(url=wiql_url, headers=headers, json=query)
         response.raise_for_status()
         work_items = response.json().get("workItems", [])
