@@ -80,6 +80,37 @@
                     </button>
                 </div>
             </div>
+
+            {% if near_sla_tickets %}
+            <div class="sla-near-expiry">
+                <h4><i class="fas fa-hourglass-half"></i> Próximos a Vencer</h4>
+                {% for priority in [1, 2, 3, 4] %}
+                {% if near_sla_tickets.get(priority) %}
+                <div class="sla-near-group">
+                    <div class="sla-near-group-header sla-near-p{{ priority }}">
+                        <span class="sla-near-priority-badge">P{{ priority }}</span>
+                        <span class="sla-near-group-count">{{ near_sla_tickets[priority] | length }} issue{{ 's' if near_sla_tickets[priority] | length > 1 else '' }}</span>
+                    </div>
+                    <ul class="sla-near-list">
+                        {% for ticket in near_sla_tickets[priority] %}
+                        <li class="sla-near-item {{ 'expired' if ticket.is_expired else 'near' }}">
+                            <div class="sla-near-item-info">
+                                <span class="sla-near-id">#{{ ticket.id }}</span>
+                                <span class="sla-near-title" title="{{ ticket.title }}">{{ ticket.title }}</span>
+                                <span class="sla-near-assignee">{{ ticket.assigned_to }}</span>
+                            </div>
+                            <span class="sla-near-time {{ 'expired' if ticket.is_expired else 'near' }}">
+                                <i class="fas {{ 'fa-times-circle' if ticket.is_expired else 'fa-hourglass-half' }}"></i>
+                                {{ ticket.remaining_display }}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
     </div>
 

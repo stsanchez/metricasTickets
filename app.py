@@ -53,6 +53,17 @@ def _get_cached_tickets(users_tuple, start_date, end_date=None):
     _api_cache[key] = {'data': data, 'ts': now}
     return data
 
+def _get_cached_near_sla(users_tuple):
+    """Wrapper con caché TTL para get_active_tickets_near_sla."""
+    key = ('near_sla', users_tuple)
+    now = time_module.time()
+    if key in _api_cache and now - _api_cache[key]['ts'] < CACHE_TTL_SECONDS:
+        print(f"⚡ Cache hit near_sla para {users_tuple}")
+        return _api_cache[key]['data']
+    data = get_active_tickets_near_sla(list(users_tuple))
+    _api_cache[key] = {'data': data, 'ts': now}
+    return data
+
 # --- LÓGICA DE DATOS ---
 def get_done_tickets_by_month(user_list, start_date=None, end_date=None):
     if start_date is None:
@@ -706,6 +717,8 @@ def dashboard():
             ]
         reports_data_js.append(r_js)
 
+    near_sla_tickets = _get_cached_near_sla(tuple(USERS_TO_QUERY))
+
     # Pasamos la función format_timedelta al template para poder usarla
     return render_template('index.html',
                           reports=reports_data,
@@ -713,7 +726,8 @@ def dashboard():
                           format_timedelta=format_timedelta,
                           START_DATE=START_DATE,
                           get_sla_limit=get_sla_limit,
-                          get_sla_warning_limit=get_sla_warning_limit)
+                          get_sla_warning_limit=get_sla_warning_limit,
+                          near_sla_tickets=near_sla_tickets)
 
 
 @app.route('/issue-details/<int:issue_id>')
@@ -945,6 +959,88 @@ def get_sla_warning_limit(priority):
         4: 3 * 24 * 3600  # P4: 3 días hábiles (60% del límite)
     }
     return warning_limits.get(priority, 1 * 24 * 3600)  # Default: 1 día
+
+def get_active_tickets_near_sla(user_list):
+    """Obtiene tickets activos (no Done) que están próximos a vencer su SLA.
+    Alerta P1/P2 cuando queda < 1 hora, P3/P4 cuando queda < 1 día."""
+    try:
+        assigned_to_conditions = [f"[System.AssignedTo] = '{user}'" for user in user_list]
+        assigned_to_clause = " OR ".join(assigned_to_conditions)
+        wiql_url = f"{ORG_URL}/{PROJECT_NAME}/_apis/wit/wiql?api-version={API_VERSION_WIQL}"
+        query = {"query": f"""
+            SELECT [System.Id] FROM workitems
+            WHERE [System.TeamProject] = @project
+            AND [System.WorkItemType] = 'Issue'
+            AND [System.State] <> 'Done'
+            AND ({assigned_to_clause})
+            ORDER BY [System.CreatedDate] ASC"""}
+        authorization = str(base64.b64encode(bytes(':' + PAT, 'ascii')), 'ascii')
+        headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + authorization}
+        print(f"🔍 Buscando tickets activos próximos a vencer SLA para: {', '.join(user_list)}...")
+        response = requests.post(url=wiql_url, headers=headers, json=query)
+        response.raise_for_status()
+        work_items = response.json().get("workItems", [])
+        if not work_items:
+            return {}
+        ticket_ids = [item['id'] for item in work_items]
+        fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.Priority", "System.Title", "System.AssignedTo"]
+        batch_url = f"{ORG_URL}/_apis/wit/workitemsbatch?api-version={API_VERSION_BATCH}"
+        all_tickets = []
+        for i in range(0, len(ticket_ids), 200):
+            chunk = ticket_ids[i:i + 200]
+            batch_response = requests.post(url=batch_url, headers=headers, json={"ids": chunk, "fields": fields_to_request})
+            batch_response.raise_for_status()
+            all_tickets.extend(batch_response.json().get("value", []))
+
+        now_dt = datetime.now(tz=ZoneInfo(TIMEZONE))
+        near_expiry_by_priority = {}
+
+        for ticket in all_tickets:
+            priority_value = ticket['fields'].get('Microsoft.VSTS.Common.Priority')
+            if not isinstance(priority_value, int) or priority_value not in [1, 2, 3, 4]:
+                continue
+            creation_date = datetime.fromisoformat(ticket['fields']['System.CreatedDate'].replace('Z', '+00:00'))
+            title = ticket['fields'].get('System.Title', 'Sin título')
+            assigned_raw = ticket['fields'].get('System.AssignedTo', '')
+            if isinstance(assigned_raw, dict):
+                assigned_to = assigned_raw.get('displayName', 'Sin asignar')
+            else:
+                assigned_to = str(assigned_raw) if assigned_raw else 'Sin asignar'
+
+            elapsed = business_time_between(creation_date, now_dt)
+            sla_limit_secs = get_sla_limit(priority_value)
+            remaining_secs = sla_limit_secs - elapsed.total_seconds()
+
+            # Umbrales de alerta: 1 hora para P1/P2, 1 día (24h) para P3/P4
+            threshold = 3600 if priority_value in [1, 2] else 86400
+
+            if remaining_secs <= threshold:
+                is_expired = remaining_secs <= 0
+                abs_td = timedelta(seconds=abs(remaining_secs))
+                time_str = format_timedelta(abs_td)
+                if is_expired:
+                    remaining_display = f"Vencido hace {time_str}" if time_str != "0" else "Recién vencido"
+                else:
+                    remaining_display = f"Vence en {time_str}"
+
+                near_expiry_by_priority.setdefault(priority_value, []).append({
+                    'id': ticket['id'],
+                    'title': title,
+                    'assigned_to': assigned_to,
+                    'remaining_display': remaining_display,
+                    'is_expired': is_expired,
+                    'remaining_secs': remaining_secs,
+                })
+
+        for p in near_expiry_by_priority:
+            near_expiry_by_priority[p].sort(key=lambda x: x['remaining_secs'])
+
+        total = sum(len(v) for v in near_expiry_by_priority.values())
+        print(f"⚠️  Tickets próximos a vencer SLA: {total}")
+        return near_expiry_by_priority
+    except Exception as e:
+        print(f"❌ Error obteniendo tickets near SLA: {e}")
+        return {}
 
 
 @app.route('/annual-report')
