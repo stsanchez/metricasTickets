@@ -53,11 +53,13 @@ def _get_cached_tickets(users_tuple, start_date, end_date=None):
     _api_cache[key] = {'data': data, 'ts': now}
     return data
 
+NEAR_SLA_CACHE_TTL = 60  # segundos — más corto para reflejar cambios de prioridad rápido
+
 def _get_cached_near_sla():
     """Wrapper con caché TTL para get_active_tickets_near_sla."""
     key = 'near_sla'
     now = time_module.time()
-    if key in _api_cache and now - _api_cache[key]['ts'] < CACHE_TTL_SECONDS:
+    if key in _api_cache and now - _api_cache[key]['ts'] < NEAR_SLA_CACHE_TTL:
         print(f"⚡ Cache hit near_sla")
         return _api_cache[key]['data']
     data = get_active_tickets_near_sla()
@@ -977,6 +979,7 @@ def get_active_tickets_near_sla():
         response = requests.post(url=wiql_url, headers=headers, json=query)
         response.raise_for_status()
         work_items = response.json().get("workItems", [])
+        print(f"   → {len(work_items)} tickets encontrados con estado To Do / Doing")
         if not work_items:
             return {}
         ticket_ids = [item['id'] for item in work_items]
@@ -993,9 +996,15 @@ def get_active_tickets_near_sla():
         near_expiry_by_priority = {}
 
         for ticket in all_tickets:
+            tid = ticket['id']
             priority_value = ticket['fields'].get('Microsoft.VSTS.Common.Priority')
+            state_val = ticket['fields'].get('System.State', '?')
+            title_short = (ticket['fields'].get('System.Title', '') or '')[:40]
+
             if not isinstance(priority_value, int) or priority_value not in [1, 2, 3, 4]:
+                print(f"   ⚠️  #{tid} [{state_val}] SKIP — prioridad inválida/sin prioridad: {priority_value!r}  '{title_short}'")
                 continue
+
             creation_date = datetime.fromisoformat(ticket['fields']['System.CreatedDate'].replace('Z', '+00:00'))
             title = ticket['fields'].get('System.Title', 'Sin título')
             state = ticket['fields'].get('System.State', '')
@@ -1006,11 +1015,16 @@ def get_active_tickets_near_sla():
                 assigned_to = str(assigned_raw) if assigned_raw else 'Sin asignar'
 
             elapsed = business_time_between(creation_date, now_dt)
+            elapsed_h = round(elapsed.total_seconds() / 3600, 1)
             sla_limit_secs = get_sla_limit(priority_value)
             remaining_secs = sla_limit_secs - elapsed.total_seconds()
 
             # Umbrales de alerta: 1 hora para P1/P2, 1 día (24h) para P3/P4
             threshold = 3600 if priority_value in [1, 2] else 86400
+
+            status = "VENCIDO" if remaining_secs <= 0 else f"resta {round(remaining_secs/3600,1)}h"
+            alerta = "→ ALERTA" if remaining_secs <= threshold else "→ OK (fuera del umbral)"
+            print(f"   #{tid} P{priority_value} [{state_val}] elapsed={elapsed_h}h  {status}  {alerta}  '{title_short}'")
 
             if remaining_secs <= threshold:
                 is_expired = remaining_secs <= 0
