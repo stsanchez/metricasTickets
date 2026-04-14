@@ -97,6 +97,7 @@
                             <div class="sla-near-item-info">
                                 <span class="sla-near-id">#{{ ticket.id }}</span>
                                 <span class="sla-near-title" title="{{ ticket.title }}">{{ ticket.title }}</span>
+                                <span class="sla-near-state {{ 'state-todo' if ticket.state == 'To Do' else 'state-doing' }}">{{ ticket.state }}</span>
                                 <span class="sla-near-assignee">{{ ticket.assigned_to }}</span>
                             </div>
                             <span class="sla-near-time {{ 'expired' if ticket.is_expired else 'near' }}">

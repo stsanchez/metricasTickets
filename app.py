@@ -969,7 +969,7 @@ def get_active_tickets_near_sla():
             SELECT [System.Id] FROM workitems
             WHERE [System.TeamProject] = @project
             AND [System.WorkItemType] = 'Issue'
-            AND [System.State] <> 'Done'
+            AND [System.State] IN ('To Do', 'Doing')
             ORDER BY [System.CreatedDate] ASC"""}
         authorization = str(base64.b64encode(bytes(':' + PAT, 'ascii')), 'ascii')
         headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + authorization}
@@ -980,7 +980,7 @@ def get_active_tickets_near_sla():
         if not work_items:
             return {}
         ticket_ids = [item['id'] for item in work_items]
-        fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.Priority", "System.Title", "System.AssignedTo"]
+        fields_to_request = ["System.CreatedDate", "Microsoft.VSTS.Common.Priority", "System.Title", "System.AssignedTo", "System.State"]
         batch_url = f"{ORG_URL}/_apis/wit/workitemsbatch?api-version={API_VERSION_BATCH}"
         all_tickets = []
         for i in range(0, len(ticket_ids), 200):
@@ -998,6 +998,7 @@ def get_active_tickets_near_sla():
                 continue
             creation_date = datetime.fromisoformat(ticket['fields']['System.CreatedDate'].replace('Z', '+00:00'))
             title = ticket['fields'].get('System.Title', 'Sin título')
+            state = ticket['fields'].get('System.State', '')
             assigned_raw = ticket['fields'].get('System.AssignedTo', '')
             if isinstance(assigned_raw, dict):
                 assigned_to = assigned_raw.get('displayName', 'Sin asignar')
@@ -1023,6 +1024,7 @@ def get_active_tickets_near_sla():
                 near_expiry_by_priority.setdefault(priority_value, []).append({
                     'id': ticket['id'],
                     'title': title,
+                    'state': state,
                     'assigned_to': assigned_to,
                     'remaining_display': remaining_display,
                     'is_expired': is_expired,
